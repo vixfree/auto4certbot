@@ -1,7 +1,7 @@
 #!/bin/bash
 # create new cert
-domains=( "nixtech.ru" "qbpro.ru" "support.qbpro.ru" "webmail.qbpro.ru" );
-adminmail="stvixfree@gmail.com";
+domains=( "mydomain.ru" "dev.mydomain.ru" "webmail.mydomain.ru" );
+adminmail="admin@mydomain.ru";
 
 function createCert() {
 for ((dmn=0; dmn != ${#domains[@]}; dmn++))

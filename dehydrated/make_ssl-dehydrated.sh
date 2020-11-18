@@ -4,7 +4,7 @@
 #
 path_ssl="/etc/ssl/private";
 path_certbot="/var/lib/dehydrated/certs";
-domains=( "qbpro.ru" "webmail.qbpro.ru" "support.qbpro.ru" );
+domains=( "mydomain.ru" "webmail.mydomain.ru" "dev.mydomain.ru" );
 
 function makeSslPem() {
 for ((dmn=0; dmn != ${#domains[@]}; dmn++))
