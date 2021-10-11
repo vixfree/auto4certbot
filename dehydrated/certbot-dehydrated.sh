@@ -4,7 +4,7 @@
 #
 path_ssl="/etc/ssl/private";
 path_certbot="/var/lib/dehydrated/certs";
-domains=( "mydomain.ru" "webmail.mydomain.ru" "dev.mydomain.ru" );
+src="/etc/scripts/autocertbot/certbot.conf"
 
 function makeSslPem() {
 for ((dmn=0; dmn != ${#domains[@]}; dmn++))
@@ -14,6 +14,7 @@ for ((dmn=0; dmn != ${#domains[@]}; dmn++))
     cat $path_certbot/${domains[$dmn]}/fullchain.pem >> $path_ssl/${domains[$dmn]}.pem;
     cat $path_certbot/${domains[$dmn]}/privkey.pem >> $path_ssl/${domains[$dmn]}.pem;
 done
+makePemList;
 }
 
 function makePemList() {
@@ -24,8 +25,21 @@ for ((icrt=0; icrt != ${#domains[@]}; icrt++))
 done
 }
 
+function checkCert() {
+if [ $(dehydrated -c -4|grep 'Certificate will not expire'|wc -l) != 0 ];
+    then
+        echo "$(date +%c) certbot(dehydrated): no certificates to upgrade...">>$logfile;
+        exit;
+    else
+        makeSslPem;
+        /etc/init.d/haproxy restart;
+        echo "$(date +%c) certbot(dehydrated): updating sertificate">>$logfile;
+fi
+}
+
+
+
 ## create sets.pem
-makeSslPem;
-makePemList;
+checkCert;
 
 
