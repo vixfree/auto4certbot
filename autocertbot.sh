@@ -39,6 +39,7 @@ for ((dmn=0; dmn != ${#domains[@]}; dmn++))
     do
       certbot certonly --preferred-challenges http --standalone -d ${domains[$dmn]};
     done
+makesslkey;
 /etc/init.d/haproxy start;
 }
 
@@ -50,6 +51,11 @@ case "$cmd" in
 createCert;
 ;;
 
+## create cert keys
+"--keylist" | "--keylist" )
+makesslkey;
+;;
+
 ## update cert
 "--update" | "--update" )
 renew;
@@ -58,8 +64,9 @@ renew;
 ## start defaults
 
 * )
-echo "please input pameters: autocertbot.sh --create | --update";
+echo "please input pameters: autocertbot.sh --create | --update | --keylist";
 echo "autocertbot.sh --create; create new certificate"
 echo "autocertbot.sh --update; update certificates;"
+echo "autocertbot.sh --keylist; create ssl keylist;"
 ;;
 esac
