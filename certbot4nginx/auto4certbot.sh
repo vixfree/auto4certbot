@@ -4,7 +4,7 @@
 # create new cert
 path_ssl="/etc/ssl";
 path_cert="/etc/letsencrypt/live";
-source "/etc/scripts/auto4certbot/auto4certbot.conf";
+source "/etc/scripts/certbot4nginx/auto4certbot.conf";
 log="/var/log/syslog";
 #
 cmd=$1;
