@@ -5,7 +5,7 @@ server {
     if ($http_host !~ "^mail.mydomen.ru$"){
         rewrite ^(.*)$ http://mail.mydomen.ru$1 redirect;
     }
-    root /home/www/letsencrypt;
+    root /home/wwwmails/mail-mydomen;
 
     error_log /var/log/nginx/err-mail_mydomen_ru.log;
     access_log /var/log/nginx/access-mail_mydomen_ru.log;
