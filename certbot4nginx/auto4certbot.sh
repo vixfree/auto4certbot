@@ -55,6 +55,36 @@ fi
 }
 
 
+function toSSL() {
+for ((dmn=0; dmn != ${#domains[@]}; dmn++))
+    do
+    eval local dreg="(" $(echo -e ${domains[$dmn]}) ")";
+         ((valtrue++));
+        cat $path_cert/${dreg[0]}/cert.pem > $path_ssl/private/${dreg[0]}.pem;
+        cat $path_cert/${dreg[0]}/chain.pem >> $path_ssl/private/${dreg[0]}.pem;
+        cat $path_cert/${dreg[0]}/fullchain.pem >> $path_ssl/private/${dreg[0]}.pem;
+        cat $path_cert/${dreg[0]}/privkey.pem >> $path_ssl/private/${dreg[0]}.pem;
+#
+        cp -f $path_ssl/private/${dreg[0]}.pem $path_ssl/certs/${dreg[0]}.pem
+        cd $path_ssl/certs
+        chmod 600 ${dreg[0]}.pem
+        ln -sf ${dreg[0]}.pem `openssl x509 -noout -hash < ${dreg[0]}.pem`.0
+        cd $path_ssl
+        echo "$(date) - auto4certbot.sh: update certlist for  ${domains[$dmn]}">> $log;
+done
+if [ $valtrue != 0 ];
+   then
+     :>/etc/ssl/crt-list.txt
+        for ((icrt=0; icrt != ${#domains[@]}; icrt++))
+         do
+          echo "$path_ssl/${domains[$icrt]}.pem">>/etc/ssl/crt-list.txt
+        done
+fi
+}
+
+
+
+
 case "$cmd" in
 
 ## create cert
@@ -67,11 +97,18 @@ createCert;
 renew;
 ;;
 
+## update cert force
+"--flist" | "--flist" )
+toSSL;
+;;
+
 ## start defaults
 
 * )
-echo "please input pameters: auto4certbot.sh --create | --update";
+echo "please input pameters: auto4certbot.sh --create | --update | --flist";
 echo "auto4certbot.sh --create; create new certificate"
 echo "auto4certbot.sh --update; update certificates;"
+echo "auto4certbot.sh --flist; update certificates from ssl;"
+
 ;;
 esac
