@@ -33,6 +33,9 @@ for ((dmn=0; dmn != ${#domains[@]}; dmn++))
         cat $path_cert/${domains[$dmn]}/chain.pem >> $path_ssl/private/${domains[$dmn]}.pem;
         cat $path_cert/${domains[$dmn]}/fullchain.pem >> $path_ssl/private/${domains[$dmn]}.pem;
         cat $path_cert/${domains[$dmn]}/privkey.pem >> $path_ssl/private/${domains[$dmn]}.pem;
+# to postfix
+	cat $path_cert/${dreg[0]}/fullchain.pem >> $path_ssl/manual/fullchain.pem;
+        cat $path_cert/${dreg[0]}/privkey.pem >> $path_ssl/manual/privkey.pem;
 #
 	cp -f $path_ssl/private/${domains[$pem_index]}.pem $path_ssl/certs/${domains[$pem_index]}.pem
     	cd $path_ssl/certs
@@ -51,6 +54,8 @@ if [ $valtrue != 0 ];
         done
 /etc/init.d/dbmail restart;
 /etc/init.d/stunnel4 restart;
+/etc/init.d/postfix restart;
+
 fi
 }
 
@@ -64,6 +69,9 @@ for ((dmn=0; dmn != ${#domains[@]}; dmn++))
         cat $path_cert/${dreg[0]}/chain.pem >> $path_ssl/private/${dreg[0]}.pem;
         cat $path_cert/${dreg[0]}/fullchain.pem >> $path_ssl/private/${dreg[0]}.pem;
         cat $path_cert/${dreg[0]}/privkey.pem >> $path_ssl/private/${dreg[0]}.pem;
+# to postfix
+	cat $path_cert/${dreg[0]}/fullchain.pem >> $path_ssl/manual/fullchain.pem;
+        cat $path_cert/${dreg[0]}/privkey.pem >> $path_ssl/manual/privkey.pem;
 #
         cp -f $path_ssl/private/${dreg[0]}.pem $path_ssl/certs/${dreg[0]}.pem
         cd $path_ssl/certs
@@ -81,6 +89,7 @@ if [ $valtrue != 0 ];
         done
 /etc/init.d/dbmail restart;
 /etc/init.d/stunnel4 restart;
+/etc/init.d/postfix restart;
 fi
 }
 
