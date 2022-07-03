@@ -4,7 +4,7 @@
 # license: GPL 2.0
 # create 2022
 #
-version="0.2.3";
+version="0.2.4";
 sname="autocertbot";
 # необходимы для работы: nginx,certbot
 # create new cert
@@ -27,10 +27,17 @@ scan_list=();
 #
 
 function createCert() {
+#
 for ((dmn=0; dmn != ${#domains[@]}; dmn++))
     do
 eval local dreg="(" $(echo -e ${domains[$dmn]}) ")";
-certbot --update-registration -m "${dreg[1]}";
+    if [ "$cmd" == "--create" ];
+        then
+            certbot -m "${dreg[1]}";
+        else
+            certbot --update-registration -m "${dreg[1]}";
+    fi
+##
 ## example manual: certbot certonly --webroot --webroot-path /tmp/letsencrypt -d mydomen.ru
 certbot certonly --webroot --webroot-path $www_root -d ${dreg[0]}
 done
@@ -54,10 +61,10 @@ for ((dmn=0; dmn != ${#domains[@]}; dmn++))
         cat $path_cert/${dreg[0]}/fullchain.pem >> $path_ssl/private/${dreg[0]}.pem;
         cat $path_cert/${dreg[0]}/privkey.pem >> $path_ssl/private/${dreg[0]}.pem;
 #
-	cp -f $path_ssl/private/${dreg[0]}.pem $path_ssl/certs/${dreg[0]}.pem
-    	cd $path_ssl/certs
-    	chmod 600 ${dreg[0]}.pem
-	ln -sf ${dreg[0]}.pem `openssl x509 -noout -hash < ${dreg[0]}.pem`.0
+        cp -f $path_ssl/private/${dreg[0]}.pem $path_ssl/certs/${dreg[0]}.pem
+        cd $path_ssl/certs
+        chmod 600 ${dreg[0]}.pem
+        ln -sf ${dreg[0]}.pem `openssl x509 -noout -hash < ${dreg[0]}.pem`.0
         cd $path_ssl
         echo "$(date) - auto4certbot.sh: update cert for  ${domains[$dmn]}">> $log;
       fi
@@ -74,30 +81,35 @@ fi
 
 
 function toSSL() {
-for ((dmn=0; dmn != ${#domains[@]}; dmn++))
-    do
-    eval local dreg="(" $(echo -e ${domains[$dmn]}) ")";
-         ((valtrue++));
-        cat $path_cert/${dreg[0]}/cert.pem > $path_ssl/private/${dreg[0]}.pem;
-        cat $path_cert/${dreg[0]}/chain.pem >> $path_ssl/private/${dreg[0]}.pem;
-        cat $path_cert/${dreg[0]}/fullchain.pem >> $path_ssl/private/${dreg[0]}.pem;
-        cat $path_cert/${dreg[0]}/privkey.pem >> $path_ssl/private/${dreg[0]}.pem;
+if [ -d $path_cert ];
+    then
+        for ((dmn=0; dmn != ${#domains[@]}; dmn++))
+            do
+                eval local dreg="(" $(echo -e ${domains[$dmn]}) ")";
+                ((valtrue++));
+                cat $path_cert/${dreg[0]}/cert.pem > $path_ssl/private/${dreg[0]}.pem;
+                cat $path_cert/${dreg[0]}/chain.pem >> $path_ssl/private/${dreg[0]}.pem;
+                cat $path_cert/${dreg[0]}/fullchain.pem >> $path_ssl/private/${dreg[0]}.pem;
+                cat $path_cert/${dreg[0]}/privkey.pem >> $path_ssl/private/${dreg[0]}.pem;
 #
-        cp -f $path_ssl/private/${dreg[0]}.pem $path_ssl/certs/${dreg[0]}.pem
-        cd $path_ssl/certs
-        chmod 600 ${dreg[0]}.pem
-        ln -sf ${dreg[0]}.pem `openssl x509 -noout -hash < ${dreg[0]}.pem`.0
-        cd $path_ssl
-        echo "$(date) - auto4certbot.sh: update certlist for  ${domains[$dmn]}">> $log;
-done
-if [ $valtrue != 0 ];
-   then
-     echo >/etc/ssl/crt-list.txt
-        for ((icrt=0; icrt != ${#domains[@]}; icrt++))
-         do
-           eval local dcrt="(" $(echo -e ${domains[$icrt]}) ")";
-          echo "$path_ssl/private/${dcrt[0]}.pem">>/etc/ssl/crt-list.txt
+                cp -f $path_ssl/private/${dreg[0]}.pem $path_ssl/certs/${dreg[0]}.pem
+                cd $path_ssl/certs
+                chmod 600 ${dreg[0]}.pem
+                ln -sf ${dreg[0]}.pem `openssl x509 -noout -hash < ${dreg[0]}.pem`.0
+                cd $path_ssl
+                echo "$(date) - auto4certbot.sh: update certlist for  ${domains[$dmn]}">> $log;
         done
+        if [ $valtrue != 0 ];
+            then
+                echo >/etc/ssl/crt-list.txt
+            for ((icrt=0; icrt != ${#domains[@]}; icrt++))
+                do
+                eval local dcrt="(" $(echo -e ${domains[$icrt]}) ")";
+                echo "$path_ssl/private/${dcrt[0]}.pem">>/etc/ssl/crt-list.txt
+            done
+        fi
+    else
+        echo "Ошибка - отсутствует $path_cert!"
 fi
 }
 
@@ -182,6 +194,7 @@ case "$cmd" in
 
 ## create cert
 "--create" | "--create" )
+
 downSite;
 createCert;
 upSite;
@@ -190,6 +203,7 @@ toSSL;
 
 ## update cert
 "--update" | "--update" )
+
 downSite;
 renew;
 upSite;
