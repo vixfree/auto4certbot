@@ -38,8 +38,8 @@ eval local dreg="(" $(echo -e ${domains[$dmn]}) ")";
             certbot --update-registration -m "${dreg[1]}" -d "${dreg[0]}" ;
     fi
 ##
-## example manual: certbot certonly --webroot --webroot-path /tmp/letsencrypt -d mydomen.ru
-certbot certonly --webroot --webroot-path $www_root -d ${dreg[0]}
+## example manual: certbot certonly --webroot --webroot-path /tmp/letsencrypt/ -d mydomen.ru
+certbot certonly --webroot --webroot-path $www_root/ -d ${dreg[0]}
 done
 }
 
