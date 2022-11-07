@@ -4,24 +4,40 @@
 # license: GPL 2.0
 # create 2022
 #
-version="0.2.9";
-sname="certbot4mail";
-# необходимы для работы: nginx,certbot
-# create new cert
+version="0.3.0";
+sname="avto4certbot";
+# необходимы для работы: nginx,certbot (и если почтовый сервер то сервисы в restartMail)
+# create new cert or update
 path_ssl="/etc/ssl";
 path_cert="/etc/letsencrypt/live";
-source "/etc/scripts/certbot4mail/certbot4mail.conf";
+source "/etc/scripts/avto4certbot/avto4certbot.conf";
+
 ## - nginx
 nginx_enable="/etc/nginx/sites-enabled";
 nginx_available="/etc/nginx/sites-available";
+## - mail services
+mailservice=(
+    "dbmail"
+    "postfix"
+    "stunnel4"
+    "rspamd"
+);
+
 ##
 www_root="/tmp/letsencrypt";
+
 ##
 path_tmp="/tmp/certbot";
+
 ##
 log="/var/log/syslog";
-#
+
+# - shared options
 cmd=$1;
+
+# - for mail server
+opt=$2;
+
 #-list enable sites
 scan_list=();
 #
@@ -35,11 +51,11 @@ eval local dreg="(" $(echo -e ${domains[$dmn]}) ")";
         then
             certbot -m "${dreg[1]}";
         else
-            certbot --update-registration -m "${dreg[1]}" -d "${dreg[0]}" ;
+            certbot --update-registration -m "${dreg[1]}";
     fi
 ##
-## example manual: certbot certonly --webroot --webroot-path /tmp/letsencrypt/ -d mydomen.ru
-certbot certonly --webroot --webroot-path $www_root/ -d ${dreg[0]}
+## example manual: certbot certonly --webroot --webroot-path /tmp/letsencrypt -d mydomen.ru
+certbot certonly --webroot --webroot-path $www_root -d ${dreg[0]}
 done
 }
 
@@ -56,25 +72,17 @@ for ((dmn=0; dmn != ${#domains[@]}; dmn++))
      if [ "$keydate" = "$rdate" ] && [ "$keytime" = "$rtime" ];
         then
          ((valtrue++));
-        cat $path_cert/${dreg[0]}/cert.pem > $path_ssl/private/${dreg[0]}.pem;
-        cat $path_cert/${dreg[0]}/chain.pem >> $path_ssl/private/${dreg[0]}.pem;
-        cat $path_cert/${dreg[0]}/fullchain.pem >> $path_ssl/private/${dreg[0]}.pem;
-        cat $path_cert/${dreg[0]}/privkey.pem >> $path_ssl/private/${dreg[0]}.pem;
+		cat $path_cert/${dreg[0]}/privkey.pem > $path_ssl/private/privkey_${dreg[0]}.pem;
+		cat $path_cert/${dreg[0]}/fullchain.pem > $path_ssl/private/fullchain_${dreg[0]}.pem;
+    		cat $path_cert/${dreg[0]}/fullchain.pem > $path_ssl/private/${dreg[0]}.pem;
+    		cat $path_cert/${dreg[0]}/privkey.pem >> $path_ssl/private/${dreg[0]}.pem;
 #
-# to postfix
-	if [ ! -d $path_ssl/manual ]; then
-	    mkdir -p $path_ssl/manual;
-	fi
-        cat $path_cert/${dreg[0]}/fullchain.pem >> $path_ssl/manual/fullchain.pem;
-        cat $path_cert/${dreg[0]}/privkey.pem >> $path_ssl/manual/privkey.pem;
-#
-
         cp -f $path_ssl/private/${dreg[0]}.pem $path_ssl/certs/${dreg[0]}.pem
         cd $path_ssl/certs
         chmod 600 ${dreg[0]}.pem
         ln -sf ${dreg[0]}.pem `openssl x509 -noout -hash < ${dreg[0]}.pem`.0
         cd $path_ssl
-        echo "$(date) - certbot4mail.sh: update cert for  ${domains[$dmn]}">> $log;
+        echo "$(date) - $sname: update cert for  ${domains[$dmn]}">> $log;
       fi
 done
 if [ $valtrue != 0 ];
@@ -95,23 +103,17 @@ if [ -d $path_cert ];
             do
                 eval local dreg="(" $(echo -e ${domains[$dmn]}) ")";
                 ((valtrue++));
-                cat $path_cert/${dreg[0]}/cert.pem > $path_ssl/private/${dreg[0]}.pem;
-                cat $path_cert/${dreg[0]}/chain.pem >> $path_ssl/private/${dreg[0]}.pem;
-                cat $path_cert/${dreg[0]}/fullchain.pem >> $path_ssl/private/${dreg[0]}.pem;
-                cat $path_cert/${dreg[0]}/privkey.pem >> $path_ssl/private/${dreg[0]}.pem;
-# to postfix
-		if [ ! -d $path_ssl/manual ]; then
-		    mkdir -p $path_ssl/manual;
-		fi
-    		cat $path_cert/${dreg[0]}/fullchain.pem >> $path_ssl/manual/fullchain.pem;
-    		cat $path_cert/${dreg[0]}/privkey.pem >> $path_ssl/manual/privkey.pem;
+		cat $path_cert/${dreg[0]}/privkey.pem > $path_ssl/private/privkey_${dreg[0]}.pem;
+		cat $path_cert/${dreg[0]}/fullchain.pem > $path_ssl/private/fullchain_${dreg[0]}.pem;
+    		cat $path_cert/${dreg[0]}/fullchain.pem > $path_ssl/private/${dreg[0]}.pem;
+    		cat $path_cert/${dreg[0]}/privkey.pem >> $path_ssl/private/${dreg[0]}.pem;
 #
                 cp -f $path_ssl/private/${dreg[0]}.pem $path_ssl/certs/${dreg[0]}.pem
                 cd $path_ssl/certs
                 chmod 600 ${dreg[0]}.pem
                 ln -sf ${dreg[0]}.pem `openssl x509 -noout -hash < ${dreg[0]}.pem`.0
                 cd $path_ssl
-                echo "$(date) - certbot4mail.sh: update certlist for  ${domains[$dmn]}">> $log;
+                echo "$(date) - $sname: update certlist for  ${domains[$dmn]}">> $log;
         done
         if [ $valtrue != 0 ];
             then
@@ -124,6 +126,7 @@ if [ -d $path_cert ];
         fi
     else
         echo "Ошибка - отсутствует $path_cert!"
+	echo "$(date) - $sname: Ошибка - отсутствует $path_cert!">> $log;
 fi
 }
 
@@ -131,10 +134,12 @@ function downSite(){
 sudo systemctl stop nginx.service;
 
 eval list_www="(" $(find $nginx_enable/* -maxdepth 0 -type l -printf '%f\n') ")";
+if [ ${#list_www[@]} != 0 ]; then
 for ((dwx=0; dwx != ${#list_www[@]}; dwx++))
     do
       rm $nginx_enable/${list_www[dwx]};
 done
+fi
 }
 
 function upSite(){
@@ -192,9 +197,11 @@ ln -s $path_tmp/$sitename.conf $nginx_enable/$sitename.conf
 }
 
 function restartMail(){
-/etc/init.d/dbmail restart;
-/etc/init.d/stunnel4 restart;
-/etc/init.d/postfix restart;
+for ((scn=0; scn != ${#mailservice[@]}; scn++))
+    do
+/etc/init.d/${mailservice[$scn]} restart;
+# systemctl restart ${mailservices[$scn]};
+done
 }
 
 
@@ -204,37 +211,48 @@ case "$cmd" in
 "--create" | "--create" )
 
 downSite;
-createCert;
 upSite;
+createCert;
 toSSL;
 downSite;
+if [ "$opt" == "mail" ]; then
 restartMail;
+fi
+
 ;;
 
 ## update cert
 "--update" | "--update" )
 
 downSite;
-renew;
 upSite;
+renew;
 toSSL;
 downSite;
+if [ "$opt" == "mail" ]; then
 restartMail;
+fi
+
+
 ;;
 
 ## update cert force
 "--flist" | "--flist" )
 toSSL;
+if [ "$opt" == "mail" ]; then
 restartMail;
+fi
+
+
 ;;
 
 ## start defaults
 
 * )
-echo "please input pameters: certbot4mail.sh --create | --update | --flist";
-echo "certbot4mail.sh --create; create new certificate"
-echo "certbot4mail.sh --update; update certificates;"
-echo "certbot4mail.sh --flist; update certificates from ssl;"
+echo "please input pameters: avto4certbot.sh --create | --update | --flist";
+echo "avto4certbot.sh --create; create new certificate or --create mail; create and restart mail services " 
+echo "avto4certbot.sh --update; update certificates or --update mail; update and restart mail services;"
+echo "avto4certbot.sh --flist; update certificates from ssl or --flist mail; update certs and restart mail services;"
 ;;
 esac
 
