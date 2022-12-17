@@ -1,1 +1,3 @@
-# package scripts for auto update all certs
+### package scripts for auto update all certs
+Если возникает ошибка: "Peer's Certificate issuer is not recognized"
+используейте параметр: git -c http.sslVerify=false clone ...
