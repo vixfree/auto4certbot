@@ -4,13 +4,15 @@
 # license: GPL 2.0
 # create 2022
 #
-version="0.3.0";
+version="0.3.1";
 sname="avto4certbot";
 # необходимы для работы: nginx,certbot (и если почтовый сервер то сервисы в restartMail)
 # create new cert or update
 path_ssl="/etc/ssl";
 path_cert="/etc/letsencrypt/live";
-source "/etc/scripts/avto4certbot/avto4certbot.conf";
+# script path
+path_script="$(dirname $(readlink --canonicalize-existing "$0"))"
+source "$path_script/avto4certbot.conf";
 
 ## - nginx
 nginx_enable="/etc/nginx/sites-enabled";
@@ -22,6 +24,11 @@ mailservice=(
     "stunnel4"
     "rspamd"
 );
+
+##--@S static values
+# depends
+pkgdep=("curl" "nginx" "certbot" "letsencrypt") # packages
+get_tools=("curl" "nginx" "certbot" "letsencrypt")
 
 ##
 www_root="/tmp/letsencrypt";
@@ -41,6 +48,33 @@ opt=$2;
 #-list enable sites
 scan_list=();
 #
+
+#--@F Check the program dependency
+function checkDep() {
+    # - msg debug
+    echo "check depends..."
+    if [ ! "$lang" ]; then
+        lang="C.UTF-8"
+    fi
+    for ((itools = 0; itools != ${#get_tools[@]}; itools++)); do
+        checktool=$(whereis -b ${get_tools[$itools]} | awk '/^'${get_tools[$itools]}':/{print $2}')
+        if [[ $checktool = "" ]]; then
+            sudo apt install ${pkgdep[$itools]}
+        fi
+        checktool=$(whereis -b ${get_tools[$itools]} | awk '/^'${get_tools[$itools]}':/{print $2}')
+        if [[ $checktool != "" ]]; then
+            eval get_${get_tools[$itools]}=$(whereis -b ${get_tools[$itools]} | awk '/^'${get_tools[$itools]}':/{print $2}')
+            list_tools[${#list_tools[@]}]="$(whereis -b ${get_tools[$itools]} | awk '/^'${get_tools[$itools]}':/{print $2}')"
+        else
+            ## lang messages if yes then lang else us...
+            reports=()
+            reports[${#reports[@]}]="Sorry, there are no required packages to work, please install:${pkgdep[@]}"
+            makeErr
+            exit
+        fi
+    done
+}
+
 
 function createCert() {
 #
@@ -249,6 +283,7 @@ fi
 ## start defaults
 
 * )
+checkDep;
 echo "please input pameters: avto4certbot.sh --create | --update | --flist";
 echo "avto4certbot.sh --create; create new certificate or --create mail; create and restart mail services " 
 echo "avto4certbot.sh --update; update certificates or --update mail; update and restart mail services;"
