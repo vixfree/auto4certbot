@@ -4,7 +4,7 @@
 # license: GPL 2.0
 # create 2022
 #
-version="0.3.1";
+version="0.3.2";
 sname="avto4certbot";
 # необходимы для работы: nginx,certbot (и если почтовый сервер то сервисы в restartMail)
 # create new cert or update
@@ -48,7 +48,8 @@ opt=$2;
 #-list enable sites
 scan_list=();
 #
-
+eval enable_www="(" $(find $nginx_enable/* -maxdepth 0 -type l -printf '%f\n') ")";
+#
 #--@F Check the program dependency
 function checkDep() {
     # - msg debug
@@ -166,8 +167,8 @@ fi
 
 function downSite(){
 sudo systemctl stop nginx.service;
-
 eval list_www="(" $(find $nginx_enable/* -maxdepth 0 -type l -printf '%f\n') ")";
+
 if [ ${#list_www[@]} != 0 ]; then
 for ((dwx=0; dwx != ${#list_www[@]}; dwx++))
     do
@@ -193,6 +194,14 @@ done
 sudo systemctl start nginx.service;
 }
 
+function restoreSite() {
+sudo systemctl stop nginx.service;
+for ((dwx=0; dwx != ${#enable_www[@]}; dwx++))
+    do
+	ln -s $nginx_available/${enable_www[dwx]} $nginx_enable/${enable_www[dwx]};
+done
+sudo systemctl start nginx.service;
+}
 
 function createConf(){
 if [ ! -d $path_tmp ];
@@ -251,6 +260,8 @@ toSSL;
 downSite;
 if [ "$opt" == "mail" ]; then
 restartMail;
+else
+restoreSite;
 fi
 
 ;;
@@ -265,6 +276,8 @@ toSSL;
 downSite;
 if [ "$opt" == "mail" ]; then
 restartMail;
+else
+restoreSite;
 fi
 
 
@@ -276,7 +289,6 @@ toSSL;
 if [ "$opt" == "mail" ]; then
 restartMail;
 fi
-
 
 ;;
 
