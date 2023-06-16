@@ -4,7 +4,7 @@
 # license: GPL 2.0
 # create 2022
 #
-version="0.3.2";
+version="0.3.3";
 sname="avto4certbot";
 # необходимы для работы: nginx,certbot (и если почтовый сервер то сервисы в restartMail)
 # create new cert or update
@@ -18,7 +18,8 @@ source "$path_script/avto4certbot.conf";
 nginx_enable="/etc/nginx/sites-enabled";
 nginx_available="/etc/nginx/sites-available";
 ## - mail services
-mailservice=(
+set_service=(
+    ##"gogs"
     "dbmail"
     "postfix"
     "stunnel4"
@@ -239,11 +240,11 @@ fi
 ln -s $path_tmp/$sitename.conf $nginx_enable/$sitename.conf
 }
 
-function restartMail(){
-for ((scn=0; scn != ${#mailservice[@]}; scn++))
+function restartService(){
+for ((scn=0; scn != ${#set_service[@]}; scn++))
     do
-/etc/init.d/${mailservice[$scn]} restart;
-# systemctl restart ${mailservices[$scn]};
+/etc/init.d/${set_service[$scn]} restart;
+# systemctl restart ${set_services[$scn]};
 done
 }
 
@@ -258,8 +259,8 @@ upSite;
 createCert;
 toSSL;
 downSite;
-if [ "$opt" == "mail" ]; then
-restartMail;
+if [ "$opt" == "srv" ]; then
+restartService;
 else
 restoreSite;
 fi
@@ -274,8 +275,8 @@ upSite;
 renew;
 toSSL;
 downSite;
-if [ "$opt" == "mail" ]; then
-restartMail;
+if [ "$opt" == "srv" ]; then
+restartService;
 else
 restoreSite;
 fi
@@ -286,8 +287,8 @@ fi
 ## update cert force
 "--flist" | "--flist" )
 toSSL;
-if [ "$opt" == "mail" ]; then
-restartMail;
+if [ "$opt" == "srv" ]; then
+restartService;
 fi
 
 ;;
@@ -297,9 +298,9 @@ fi
 * )
 checkDep;
 echo "please input pameters: avto4certbot.sh --create | --update | --flist";
-echo "avto4certbot.sh --create; create new certificate or --create mail; create and restart mail services " 
-echo "avto4certbot.sh --update; update certificates or --update mail; update and restart mail services;"
-echo "avto4certbot.sh --flist; update certificates from ssl or --flist mail; update certs and restart mail services;"
+echo "avto4certbot.sh --create; create new certificate or --create srv; create and restart mail or other  services " 
+echo "avto4certbot.sh --update; update certificates or --update srv; update and restart mail or others services;"
+echo "avto4certbot.sh --flist; update certificates from ssl or --flist srv; update certs and restart mail or other services;"
 ;;
 esac
 
