@@ -4,7 +4,7 @@
 # license: GPL 2.0
 # create 2022
 #
-version="0.3.3";
+version="0.3.5";
 sname="avto4certbot";
 # необходимы для работы: nginx,certbot (и если почтовый сервер то сервисы в restartMail)
 # create new cert or update
@@ -17,13 +17,18 @@ source "$path_script/avto4certbot.conf";
 ## - nginx
 nginx_enable="/etc/nginx/sites-enabled";
 nginx_available="/etc/nginx/sites-available";
-## - mail services
-set_service=(
-    ##"gogs"
-    "dbmail"
-    "postfix"
-    "stunnel4"
-    "rspamd"
+
+## - mail service or others
+set_service=( 
+  #"dbmail" 
+  #"opendkim" 
+  #"clamav-daemon" 
+  #"clamav-freshclam" 
+  #"clamsmtp" 
+  #"postfix" 
+  #"stunnel4" 
+  #"saslauthd" 
+  #"spamassassin"
 );
 
 ##--@S static values
@@ -49,8 +54,9 @@ opt=$2;
 #-list enable sites
 scan_list=();
 #
-eval enable_www="(" $(find $nginx_enable/* -maxdepth 0 -type l -printf '%f\n') ")";
+eval enable_www="(" $(find $nginx_enable/* -maxdepth 0 -type l -printf '%f\n' 2>/dev/null) ")";
 #
+
 #--@F Check the program dependency
 function checkDep() {
     # - msg debug
@@ -105,8 +111,7 @@ for ((dmn=0; dmn != ${#domains[@]}; dmn++))
     eval local dreg="(" $(echo -e ${domains[$dmn]}) ")";
      keydate=$(ls -l --time-style=long-iso $path_cert/${dreg[0]}/cert.pem |awk {'print$6'});
      keytime=$(ls -l --time-style=long-iso $path_cert/${dreg[0]}/cert.pem |awk {'print$7'});
-     if [ "$keydate" = "$rdate" ] && [ "$keytime" = "$rtime" ];
-        then
+     if [[ "$keydate" = "$rdate" ]] && [[ "$keytime" = "$rtime" ]]; then
          ((valtrue++));
 		cat $path_cert/${dreg[0]}/privkey.pem > $path_ssl/private/privkey_${dreg[0]}.pem;
 		cat $path_cert/${dreg[0]}/fullchain.pem > $path_ssl/private/fullchain_${dreg[0]}.pem;
@@ -121,8 +126,7 @@ for ((dmn=0; dmn != ${#domains[@]}; dmn++))
         echo "$(date) - $sname: update cert for  ${domains[$dmn]}">> $log;
       fi
 done
-if [ $valtrue != 0 ];
-   then
+if [ $valtrue != 0 ];then
      :>/etc/ssl/crt-list.txt
         for ((icrt=0; icrt != ${#domains[@]}; icrt++))
          do
@@ -151,8 +155,7 @@ if [ -d $path_cert ];
                 cd $path_ssl
                 echo "$(date) - $sname: update certlist for  ${domains[$dmn]}">> $log;
         done
-        if [ $valtrue != 0 ];
-            then
+        if [ $valtrue != 0 ]; then
                 echo >/etc/ssl/crt-list.txt
             for ((icrt=0; icrt != ${#domains[@]}; icrt++))
                 do
@@ -248,7 +251,6 @@ for ((scn=0; scn != ${#set_service[@]}; scn++))
 done
 }
 
-
 case "$cmd" in
 
 ## create cert
@@ -273,14 +275,12 @@ fi
 downSite;
 upSite;
 renew;
-toSSL;
 downSite;
-if [ "$opt" == "srv" ]; then
-restartService;
+if [[ "$opt" == "srv" ]] && [[ $valtrue != 0 ]]; then
+ restartService;
 else
-restoreSite;
+ restoreSite;
 fi
-
 
 ;;
 
