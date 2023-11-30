@@ -4,7 +4,7 @@
 # license: GPL 2.0
 # create 2022
 #
-version="0.3.5";
+version="0.3.7";
 sname="avto4certbot";
 # необходимы для работы: nginx,certbot (и если почтовый сервер то сервисы в restartMail)
 # create new cert or update
@@ -83,6 +83,15 @@ function checkDep() {
     done
 }
 
+##--@F make all errors
+function makeErr() {
+for ((rpt_index=0; rpt_index != ${#reports[@]}; rpt_index++))
+    do
+    echo  "$rdate $sname: ${reports[$rpt_index]}">>$log;
+    echo   "${reports[$rpt_index]}";
+    done
+ exit 0;
+}
 
 function createCert() {
 #
