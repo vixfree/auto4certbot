@@ -4,7 +4,7 @@
 # license: GPL 2.0
 # create 2022
 #
-version="0.3.7";
+version="0.3.9";
 sname="avto4certbot";
 # необходимы для работы: nginx,certbot (и если почтовый сервер то сервисы в restartMail)
 # create new cert or update
@@ -122,17 +122,19 @@ for ((dmn=0; dmn != ${#domains[@]}; dmn++))
      keytime=$(ls -l --time-style=long-iso $path_cert/${dreg[0]}/cert.pem |awk {'print$7'});
      if [[ "$keydate" = "$rdate" ]] && [[ "$keytime" = "$rtime" ]]; then
          ((valtrue++));
+		if [ -d $path_cert/${dreg[0]} ]; then
 		cat $path_cert/${dreg[0]}/privkey.pem > $path_ssl/private/privkey_${dreg[0]}.pem;
 		cat $path_cert/${dreg[0]}/fullchain.pem > $path_ssl/private/fullchain_${dreg[0]}.pem;
     		cat $path_cert/${dreg[0]}/fullchain.pem > $path_ssl/private/${dreg[0]}.pem;
     		cat $path_cert/${dreg[0]}/privkey.pem >> $path_ssl/private/${dreg[0]}.pem;
 #
-        cp -f $path_ssl/private/${dreg[0]}.pem $path_ssl/certs/${dreg[0]}.pem
-        cd $path_ssl/certs
-        chmod 600 ${dreg[0]}.pem
-        ln -sf ${dreg[0]}.pem `openssl x509 -noout -hash < ${dreg[0]}.pem`.0
-        cd $path_ssl
-        echo "$(date) - $sname: update cert for  ${domains[$dmn]}">> $log;
+    		cp -f $path_ssl/private/${dreg[0]}.pem $path_ssl/certs/${dreg[0]}.pem
+    		cd $path_ssl/certs
+    		chmod 600 ${dreg[0]}.pem
+    		ln -sf ${dreg[0]}.pem `openssl x509 -noout -hash < ${dreg[0]}.pem`.0
+    		cd $path_ssl
+    		echo "$(date) - $sname: update cert for  ${domains[$dmn]}">> $log;
+		fi
       fi
 done
 if [ $valtrue != 0 ];then
@@ -152,6 +154,7 @@ if [ -d $path_cert ];
             do
                 eval local dreg="(" $(echo -e ${domains[$dmn]}) ")";
                 ((valtrue++));
+		if [ -d $path_cert/${dreg[0]} ]; then
 		cat $path_cert/${dreg[0]}/privkey.pem > $path_ssl/private/privkey_${dreg[0]}.pem;
 		cat $path_cert/${dreg[0]}/fullchain.pem > $path_ssl/private/fullchain_${dreg[0]}.pem;
     		cat $path_cert/${dreg[0]}/fullchain.pem > $path_ssl/private/${dreg[0]}.pem;
@@ -163,6 +166,7 @@ if [ -d $path_cert ];
                 ln -sf ${dreg[0]}.pem `openssl x509 -noout -hash < ${dreg[0]}.pem`.0
                 cd $path_ssl
                 echo "$(date) - $sname: update certlist for  ${domains[$dmn]}">> $log;
+		fi
         done
         if [ $valtrue != 0 ]; then
                 echo >/etc/ssl/crt-list.txt
