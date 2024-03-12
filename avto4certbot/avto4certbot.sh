@@ -11,7 +11,7 @@ sname="avto4certbot";
 path_ssl="/etc/ssl";
 path_cert="/etc/letsencrypt/live";
 # script path
-path_script=$( cd -- $( dirname -- "${BASH_SOURCE[0]}" ) &> /dev/null && pwd );
+path_script="$(dirname $(readlink --canonicalize-existing "$0"))";
 source "$path_script/avto4certbot.conf";
 
 ## - nginx
