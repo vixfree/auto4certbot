@@ -4,14 +4,14 @@
 # license: GPL 2.0
 # create 2022
 #
-version="0.3.9";
+version="0.4.1";
 sname="avto4certbot";
 # необходимы для работы: nginx,certbot (и если почтовый сервер то сервисы в restartMail)
 # create new cert or update
 path_ssl="/etc/ssl";
 path_cert="/etc/letsencrypt/live";
 # script path
-path_script="$(dirname $(readlink --canonicalize-existing "$0"))";
+path_script=$( cd -- $( dirname -- "${BASH_SOURCE[0]}" ) &> /dev/null && pwd );
 source "$path_script/avto4certbot.conf";
 
 ## - nginx
@@ -20,15 +20,8 @@ nginx_available="/etc/nginx/sites-available";
 
 ## - mail service or others
 set_service=( 
-  #"dbmail" 
-  #"opendkim" 
-  #"clamav-daemon" 
-  #"clamav-freshclam" 
-  #"clamsmtp" 
-  #"postfix" 
-  #"stunnel4" 
-  #"saslauthd" 
-  #"spamassassin"
+  #"postfix"
+  #"dbmail"
 );
 
 ##--@S static values
@@ -184,7 +177,7 @@ fi
 
 function downSite(){
 sudo systemctl stop nginx.service;
-eval list_www="(" $(find $nginx_enable/* -maxdepth 0 -type l -printf '%f\n') ")";
+eval list_www="(" $(find $nginx_enable/* -maxdepth 0 -type l -printf '%f\n' 2>/dev/null) ")";
 
 if [ ${#list_www[@]} != 0 ]; then
 for ((dwx=0; dwx != ${#list_www[@]}; dwx++))
@@ -196,7 +189,7 @@ fi
 
 function upSite(){
 sudo systemctl stop nginx.service;
-eval cert_bot="(" $(find $nginx_enable/* -maxdepth 0 -type l -printf '%f\n') ")";
+eval cert_bot="(" $(find $nginx_enable/* -maxdepth 0 -type l -printf '%f\n' 2>/dev/null) ")";
 for ((cr=0; cr != ${#cert_bot[@]}; cr++))
     do
       rm $nginx_enable/${cert_bot[cr]};
@@ -213,6 +206,14 @@ sudo systemctl start nginx.service;
 
 function restoreSite() {
 sudo systemctl stop nginx.service;
+eval list_www="(" $(find $nginx_enable/* -maxdepth 0 -type l -printf '%f\n' 2>/dev/null) ")";
+
+if [ ${#list_www[@]} != 0 ]; then
+for ((dwx=0; dwx != ${#list_www[@]}; dwx++))
+    do
+      rm $nginx_enable/${list_www[dwx]};
+done
+fi
 for ((dwx=0; dwx != ${#enable_www[@]}; dwx++))
     do
 	ln -s $nginx_available/${enable_www[dwx]} $nginx_enable/${enable_www[dwx]};
