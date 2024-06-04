@@ -4,7 +4,7 @@
 # license: GPL 2.0
 # create 2022
 #
-version="0.4.1";
+version="0.4.2";
 sname="avto4certbot";
 # необходимы для работы: nginx,certbot (и если почтовый сервер то сервисы в restartMail)
 # create new cert or update
@@ -20,8 +20,7 @@ nginx_available="/etc/nginx/sites-available";
 
 ## - mail service or others
 set_service=( 
-  #"postfix"
-  #"dbmail"
+  "nginx"
 );
 
 ##--@S static values
@@ -311,6 +310,7 @@ fi
 
 * )
 checkDep;
+echo "$sname:$version"
 echo "please input pameters: avto4certbot.sh --create | --update | --flist";
 echo "avto4certbot.sh --create; create new certificate or --create srv; create and restart mail or other  services " 
 echo "avto4certbot.sh --update; update certificates or --update srv; update and restart mail or others services;"
