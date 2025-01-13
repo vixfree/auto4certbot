@@ -4,7 +4,7 @@
 # license: GPL 2.0
 # create 2022
 #
-version="0.4.2";
+version="0.4.3";
 sname="avto4certbot";
 # необходимы для работы: nginx,certbot (и если почтовый сервер то сервисы в restartMail)
 # create new cert or update
@@ -18,15 +18,20 @@ source "$path_script/avto4certbot.conf";
 nginx_enable="/etc/nginx/sites-enabled";
 nginx_available="/etc/nginx/sites-available";
 
+## - apache
+nginx_enable="/etc/apache/sites-enabled";
+nginx_available="/etc/apache/sites-available";
+
 ## - mail service or others
 set_service=( 
   "nginx"
+  #"apache"
 );
 
 ##--@S static values
 # depends
-pkgdep=("curl" "nginx" "certbot" "letsencrypt") # packages
-get_tools=("curl" "nginx" "certbot" "letsencrypt")
+pkgdep=("curl" "certbot" "letsencrypt") # packages
+get_tools=("curl" "certbot" "letsencrypt")
 
 ##
 www_root="/tmp/letsencrypt";
