@@ -208,16 +208,17 @@ sudo systemctl start nginx.service;
 }
 
 function createConf(){
-if [ ! -d $path_tmp ];
-  then
-    mkdir -p $path_tmp;
-fi
+  if [ ! -d $path_tmp/conf ]; then
+      mkdir -p $path_tmp/conf;
+  fi
 
-if [ ! -d $www_root ];
-  then
-    mkdir -p $www_root/.well-known/acme-challenge;
-chown -R www-data:www-data $www_root;
-fi
+  if [ ! -d $www_root ]; then
+      mkdir -p $www_root/.well-known/acme-challenge;
+      chown -R www-data:www-data $www_root;
+  fi
+
+## apache2 config
+if [[ $opt != "nginx" ]] || [[ "$opt" == "apache" ]]; then
     echo >$path_tmp/$sitename.conf;
     echo -e 'server { listen      0.0.0.0:'"$siteport"';' >>$path_tmp/$sitename.conf;
     echo -e '\n' >>$path_tmp/$sitename.conf;
@@ -240,15 +241,35 @@ fi
     echo -e 'error_log /var/log/nginx/err-certbot.log;' >>$path_tmp/$sitename.conf;
     echo -e 'access_log /var/log/nginx/access-certbot.log;' >>$path_tmp/$sitename.conf;
     echo -e '}' >>$path_tmp/$sitename.conf;
-ln -s $path_tmp/$sitename.conf $nginx_enable/$sitename.conf
-}
+    ln -s $path_tmp/$sitename.conf $nginx_enable/$sitename.conf
+fi
 
-function restartService(){
-for ((scn=0; scn != ${#set_service[@]}; scn++))
-    do
-/etc/init.d/${set_service[$scn]} restart;
-# systemctl restart ${set_services[$scn]};
-done
+## nginx config
+if [[ $opt != "apache" ]] || [[ "$opt" == "nginx" ]]; then
+    echo >$path_tmp/$sitename.conf;
+    echo -e 'server { listen      0.0.0.0:'"$siteport"';' >>$path_tmp/$sitename.conf;
+    echo -e '\n' >>$path_tmp/$sitename.conf;
+    echo -e 'server_name '"$sitename"';' >>$path_tmp/$sitename.conf;
+    echo -e '\n' >>$path_tmp/$sitename.conf;
+    echo -e 'location /.well-known/acme-challenge {' >>$path_tmp/$sitename.conf;
+    echo -e '    allow all;' >>$path_tmp/$sitename.conf;
+    echo -e '    autoindex off;' >>$path_tmp/$sitename.conf;
+    echo -e '    default_type "text/plain";' >>$path_tmp/$sitename.conf;
+    echo -e '    root '"$www_root"';' >>$path_tmp/$sitename.conf;
+    echo -e '}' >>$path_tmp/$sitename.conf;
+    echo -e '\n' >>$path_tmp/$sitename.conf;
+    echo -e 'location = /.well-known {' >>$path_tmp/$sitename.conf;
+    echo -e '    return 404;' >>$path_tmp/$sitename.conf;
+    echo -e '}' >>$path_tmp/$sitename.conf;
+    echo -e '\n' >>$path_tmp/$sitename.conf;
+    echo -e 'error_page 404 /404.html;' >>$path_tmp/$sitename.conf;
+    echo -e 'error_page 500 502 503 504 /50x.html;' >>$path_tmp/$sitename.conf;
+    echo -e '\n' >>$path_tmp/$sitename.conf;
+    echo -e 'error_log /var/log/nginx/err-certbot.log;' >>$path_tmp/$sitename.conf;
+    echo -e 'access_log /var/log/nginx/access-certbot.log;' >>$path_tmp/$sitename.conf;
+    echo -e '}' >>$path_tmp/$sitename.conf;
+    ln -s $path_tmp/$sitename.conf $nginx_enable/$sitename.conf
+fi
 }
 
 case "$cmd" in
