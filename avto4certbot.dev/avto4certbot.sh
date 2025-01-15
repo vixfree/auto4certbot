@@ -24,11 +24,15 @@ opt=$2;
 
 #--@F Get info area
 function getInfo() {
-if [ $opt = "apache" ];then
-  find $sites_apache/* -maxdepth 0 -type l -printf '%f\n' 2>$tmp_dir/active_sites.inf;
+if [ ! -d $tmp_dir ]; then
+ mkdir -p $tmp_dir;
 fi
-if [ $opt = "nginx" ];then
-  find $sites_nginx/* -maxdepth 0 -type l -printf '%f\n' 2>$tmp_dir/active_sites.inf;
+
+if [[ $opt != "nginx" ]] || [[ "$opt" == "apache" ]]; then
+  find $sites_apache/* -maxdepth 0 -type l -printf '%f\n' >$tmp_dir/active_sites.inf;
+fi
+if [[ $opt != "apache" ]] || [[ "$opt" == "nginx" ]]; then
+  find $sites_nginx/* -maxdepth 0 -type l -printf '%f\n' >$tmp_dir/active_sites.inf;
 fi
 }
 
@@ -282,7 +286,12 @@ fi
 
 ## update cert
 "--test" | "--test" )
-getInfo;
+if [ "$opt" != "" ]; then
+  getInfo;
+else
+  echo "no parameter specified - nginx or apache?"
+  echo "avtocertbot.sh --test apache"
+fi
 
 ;;
 
