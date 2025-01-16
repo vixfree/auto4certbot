@@ -74,10 +74,12 @@ fi
 
 ##
 if [[ $opt != "nginx" ]] || [[ "$opt" == "apache" ]]; then
-  find $sites_apache/* -maxdepth 0 -type l -printf '%f\n' >$tmp_dir/active_sites.inf;
+  find $sites_apache/* -maxdepth 0 -type l -printf '%f\n' >$tmp_dir/active_sites.inf 2>/dev/null;
+  get_tools[${#get_tools[@]}]="apache2";
 fi
 if [[ $opt != "apache" ]] || [[ "$opt" == "nginx" ]]; then
-  find $sites_nginx/* -maxdepth 0 -type l -printf '%f\n' >$tmp_dir/active_sites.inf;
+  find $sites_nginx/* -maxdepth 0 -type l -printf '%f\n' >$tmp_dir/active_sites.inf 2>/dev/null;
+  get_tools[${#get_tools[@]}]="nginx";
 fi
 }
 
@@ -124,24 +126,39 @@ for ((xd=0; xd != ${#domains[@]}; xd++)); do
     site_name="${site_data[0]}";
     site_owner="${site_data[1]}";
     site_port="${site_data[2]}";
-  if [[ "$mode" !="" ]] || [[ "$mode" == "create"]]; then
-    echo
-  fi
-  if [[ "$mode" !="" ]] || [[ "$mode" == "update"]]; then
+  case "$cmd" in
+  ## create cert
+  "--create" | "--create" )
+    echo "ok1"
+  ;;
 
-  fi
-  if [[ "$mode" !="" ]] || [[ "$mode" == "flist"]]; then
+  ## create cert
+  "--update" | "--update" )
+    echo "ok2"
+  ;;
 
-  fi
+  ## create cert
+  "--flist" | "--flist" )
+    echo "ok3"
+  ;;
+
+  ## start defaults
+  * )
+  reports=()
+  reports[${#reports[@]}]="error option!"
+  makeErr;
+    ;;
+  esac
+
 done
 
 ## if event - yes
 if [ $event_sw != 0 ];then
-     :>/etc/ssl/crt-list.txt
-        for ((icrt=0; icrt != ${#domains[@]}; icrt++))
-         do
-          echo "$path_ssl/${domains[$icrt]}.pem">>/etc/ssl/crt-list.txt
-        done
+  echo>/etc/ssl/crt-list.txt
+  for ((xt=0; xt != ${#domains[@]}; xt++)); do
+    local site_data=( $(echo -e ${domains[$xt]}|sed 's/ /\n /g') );
+    echo "$path_ssl/${site_data[0]}.pem">>/etc/ssl/crt-list.txt
+  done
 fi
 }
 
@@ -201,59 +218,17 @@ echo "avto4certbot.sh --update; update certificates or --update [apache & nginx]
 echo "avto4certbot.sh --flist; update certificates from ssl or --flist [apache & nginx]; rescan list certificates;"
 echo "avto4certbot.sh --help; this help"
 echo "* examples:"
-echo "avtocertbot.sh --test apache"
-echo "or"
-echo "avtocertbot.sh --test nginx"
+echo "  avtocertbot.sh --update apache"
+echo "  or"
+echo "  avtocertbot.sh --update nginx"
 }
 
-case "$cmd" in
-
-## create cert
-"--create" | "--create" )
-if [ "$opt" != "" ]]; then
-  mode="create";
+if [ "$opt" != "" ]; then
+  getInfo;
+  checkDep;
   execTask;
 else
-  echo "no parameter specified - nginx or apache?"
+  pHelp;
 fi
-;;
-
-## update cert
-"--update" | "--update" )
-if [ "$opt" != "" ]]; then
-  mode="update";
-  execTask;
-else
-  echo "no parameter specified - nginx or apache?"
-fi
-;;
-
-## update cert
-"--test" | "--test" )
-if [ "$opt" != "" ]]; then
-  mode="test";
-  execTask;
-else
-  echo "no parameter specified - nginx or apache?"
-fi
-;;
-
-## update cert force
-"--flist" | "--flist" )
-if [ "$opt" != "" ]]; then
-  mode="flist";
-  execTask;
-else
-  echo "no parameter specified - nginx or apache?"
-fi
-;;
-
-## start defaults
-
-* )
-checkDep;
-pHelp;
-;;
-esac
 
 exit
