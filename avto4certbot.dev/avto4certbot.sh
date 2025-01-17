@@ -11,9 +11,16 @@ sname="avto4certbot";
 path_script=$( cd -- $( dirname -- "${BASH_SOURCE[0]}" ) &> /dev/null && pwd );
 source "$path_script/avto4certbot.conf";
 
+# service LAMP
+service="";
 
+# new certificate or renewal event
 event_sw=0;
-mode="";
+
+# event begin or end the work script
+event_key="1";
+
+# message from errors
 reports=();
 
 ##--@S static values
@@ -46,6 +53,9 @@ fi
 
 if [ $sites_apache == "" ]; then
   sites_apache="/etc/apache2/sites-enabled";
+  if [ "$(apachectl -M|grep rewrite|wc -m)" == "0" ]; then
+    a2enmod rewrite
+  fi
 fi
 
 if [ $path_ssl == "" ]; then
@@ -76,10 +86,12 @@ fi
 if [[ $opt != "nginx" ]] || [[ "$opt" == "apache" ]]; then
   find $sites_apache/* -maxdepth 0 -type l -printf '%f\n' >$tmp_dir/active_sites.inf 2>/dev/null;
   get_tools[${#get_tools[@]}]="apache2";
+  service="apache2";
 fi
 if [[ $opt != "apache" ]] || [[ "$opt" == "nginx" ]]; then
   find $sites_nginx/* -maxdepth 0 -type l -printf '%f\n' >$tmp_dir/active_sites.inf 2>/dev/null;
   get_tools[${#get_tools[@]}]="nginx";
+  service="nginx";
 fi
 }
 
@@ -109,6 +121,43 @@ function checkDep() {
     done
 }
 
+function swSites(){
+## clear job link
+if [ "$event_key" = "1" ]; then
+  for ((xd=0; xd != ${#domains[@]}; xd++)); do
+    local site_data=( $(echo -e ${domains[$xd]}|sed 's/ /\n /g') );
+    site_name="${site_data[0]}";
+    if [[ $opt != "nginx" ]] || [[ "$opt" == "apache" ]]; then
+      if [ -f $sites_apache/$site_name.conf ]; then
+        rm $sites_apache/$site_name.conf
+      fi
+    fi
+    if [[ $opt != "apache" ]] || [[ "$opt" == "nginx" ]]; then
+      if [ -f $sites_nginx/$site_name.conf ]; then
+        rm $sites_nginx/$site_name.conf
+      fi
+    fi
+  done
+fi
+## restore job link
+if [ "$event_key" = "0" ]; then
+  for ((xd=0; xd != ${#domains[@]}; xd++)); do
+    local site_data=( $(echo -e ${domains[$xd]}|sed 's/ /\n /g') );
+    site_name="${site_data[0]}";
+    if [[ $opt != "nginx" ]] || [[ "$opt" == "apache" ]]; then
+      if [ ! -f $sites_apache/$site_name.conf ]; then
+        ln -s $available_apache/$site_name.conf $sites_apache/$site_name.conf
+      fi
+    fi
+    if [[ $opt != "apache" ]] || [[ "$opt" == "nginx" ]]; then
+      if [ ! -f $sites_nginx/$site_name.conf ]; then
+        ln -s $available_nginx/$site_name.conf $sites_apache/$site_name.conf
+      fi
+    fi
+  done
+fi
+}
+
 ##--@F make all errors
 function makeErr() {
 for ((rpt_index=0; rpt_index != ${#reports[@]}; rpt_index++))
@@ -119,44 +168,53 @@ for ((rpt_index=0; rpt_index != ${#reports[@]}; rpt_index++))
  exit 0;
 }
 
-##--@F exec task
-function execTask(){
+function createCert() {
+#
 for ((xd=0; xd != ${#domains[@]}; xd++)); do
   local site_data=( $(echo -e ${domains[$xd]}|sed 's/ /\n /g') );
-    site_name="${site_data[0]}";
-    site_owner="${site_data[1]}";
-    site_port="${site_data[2]}";
-  case "$cmd" in
-  ## create cert
-  "--create" | "--create" )
-    echo "ok1"
-  ;;
+  site_name="${site_data[0]}";
+  site_owner="${site_data[1]}";
+  certbot register -m "$site_owner" -d $site_name
+  sleep 2;
+  certbot -m "$site_owner" certonly --webroot --webroot-path $web_dir -d $site_name
+  sleep 3;
+done
+}
 
-  ## create cert
-  "--update" | "--update" )
-    echo "ok2"
-  ;;
 
-  ## create cert
-  "--flist" | "--flist" )
-    echo "ok3"
-  ;;
-
-  ## start defaults
-  * )
-  reports=()
-  reports[${#reports[@]}]="error option!"
-  makeErr;
-    ;;
-  esac
-
+##--@F exec task
+function scanSSL(){
+## if event - yes
+event_sw=0;
+rdate=$(date +%Y-%m-%d);
+rtime=$(date +%H:%M);
+for ((xd=0; xd != ${#domains[@]}; xd++)); do
+  local site_data=( $(echo -e ${domains[$xd]}|sed 's/ /\n /g') );
+  site_name="${site_data[0]}";
+  keydate=$(ls -l --time-style=long-iso $path_cert/$site_name/cert.pem |awk {'print$6'});
+  keytime=$(ls -l --time-style=long-iso $path_cert/$site_name/cert.pem |awk {'print$7'});
+  if [[ "$keydate" = "$rdate" ]] && [[ "$keytime" = "$rtime" ]]; then
+    ((event_sw++));
+      if [ -d $path_cert/$site_name ]; then
+        cat $path_cert/$site_name/privkey.pem > $path_ssl/private/privkey_$site_name.pem;
+        cat $path_cert/$site_name/fullchain.pem > $path_ssl/private/fullchain_$site_name.pem;
+        cat $path_cert/$site_name/fullchain.pem > $path_ssl/private/$site_name.pem;
+        cat $path_cert/$site_name/privkey.pem >> $path_ssl/private/$site_name.pem;
+      #
+        cp -f $path_ssl/private/$site_name.pem $path_ssl/certs/$site_name.pem
+        cd $path_ssl/certs
+        chmod 600 $site_name.pem
+        ln -sf $site_name.pem `openssl x509 -noout -hash < $site_name.pem`.0
+        cd $path_ssl
+        echo "$(date) - $sname: update cert for  $site_name">> $log;
+      fi
+  fi
 done
 
-## if event - yes
 if [ $event_sw != 0 ];then
   echo>/etc/ssl/crt-list.txt
-  for ((xt=0; xt != ${#domains[@]}; xt++)); do
-    local site_data=( $(echo -e ${domains[$xt]}|sed 's/ /\n /g') );
+  for ((xd=0; xd != ${#domains[@]}; xd++)); do
+    local site_data=( $(echo -e ${domains[$xd]}|sed 's/ /\n /g') );
     echo "$path_ssl/${site_data[0]}.pem">>/etc/ssl/crt-list.txt
   done
 fi
@@ -164,49 +222,58 @@ fi
 
 ##--@F create configs
 function createConf(){
-## apache2 config
-if [[ $opt != "nginx" ]] || [[ "$opt" == "apache" ]]; then
+for ((xd=0; xd != ${#domains[@]}; xd++)); do
+  local site_data=( $(echo -e ${domains[$xd]}|sed 's/ /\n /g') );
+  site_name="${site_data[0]}";
+  site_owner="${site_data[1]}";
+  site_port="${site_data[2]}";
+  ## apache2 config
+  if [[ $opt != "nginx" ]] || [[ "$opt" == "apache" ]]; then
     echo >$conf_dir/$site_name.conf;
     echo -e '<VirtualHost *:'"$site_port"'>' >>$conf_dir/$site_name.conf;
-    echo -e 'ServerName '"$site_name"'' >>$conf_dir/$site_name.conf;
-    echo -e 'ServerAlias '"$site_name"'' >>$conf_dir/$site_name.conf;
-    echo -e 'DocumentRoot '"$web_dir"'' >>$conf_dir/$site_name.conf;
-    echo -e '\n' >>$conf_dir/$site_name.conf;
-    echo -e '<Directory'"$web_dir"' >' >>$conf_dir/$site_name.conf;
-    echo -e 'Options -Indexes +FollowSymLinks +MultiViews' >>$conf_dir/$site_name.conf;
-    echo -e 'AllowOverride All' >>$conf_dir/$site_name.conf;
-    echo -e 'Require all granted' >>$conf_dir/$site_name.conf;
-    echo -e '</Directory>' >>$conf_dir/$site_name.conf;
-    echo -e '\n' >>$conf_dir/$site_name.conf;
-    echo -e 'ErrorLog ${APACHE_LOG_DIR}/error.log' >>$conf_dir/$site_name.conf;
-    echo -e 'CustomLog ${APACHE_LOG_DIR}/access.log combined' >>$conf_dir/$site_name.conf;
+    echo -e '  ServerName '"$site_name"'' >>$conf_dir/$site_name.conf;
+    echo -e '  ServerAlias '"$site_name"'' >>$conf_dir/$site_name.conf;
+    echo -e '  DocumentRoot '"$web_dir"'' >>$conf_dir/$site_name.conf;
+    echo -e ''>>$conf_dir/$site_name.conf;
+    echo -e '  <Directory '"$web_dir"'>' >>$conf_dir/$site_name.conf;
+    echo -e '    RewriteEngine On'>>$conf_dir/$site_name.conf;
+    echo -e '    RewriteCond %{REQUEST_URI} !^/\.well\-known/acme\-challenge/'>>$conf_dir/$site_name.conf;
+    echo -e '    Options -Indexes +FollowSymLinks +MultiViews' >>$conf_dir/$site_name.conf;
+    echo -e '    AllowOverride All' >>$conf_dir/$site_name.conf;
+    echo -e '    Require all granted' >>$conf_dir/$site_name.conf;
+    echo -e '  </Directory>\n' >>$conf_dir/$site_name.conf;
+    echo -e '  ErrorLog ${APACHE_LOG_DIR}/error.log' >>$conf_dir/$site_name.conf;
+    echo -e '  CustomLog ${APACHE_LOG_DIR}/access.log combined' >>$conf_dir/$site_name.conf;
     echo -e '</VirtualHost>' >>$conf_dir/$site_name.conf;
-    ln -s $conf_dir/$site_name.conf $sites_apache/$site_name.conf
-fi
+    if [ ! -f $sites_apache/$site_name.conf ]; then
+      ln -s $conf_dir/$site_name.conf $sites_apache/$site_name.conf
+    fi
+  fi
 
-## nginx config
-if [[ $opt != "apache" ]] || [[ "$opt" == "nginx" ]]; then
+  ## nginx config
+  if [[ $opt != "apache" ]] || [[ "$opt" == "nginx" ]]; then
     echo >$conf_dir/$site_name.conf;
-    echo -e 'server { listen      0.0.0.0:'"$site_port"';' >>$conf_dir/$site_name.conf;
-    echo -e 'server_name '"$site_name"';' >>$conf_dir/$site_name.conf;
-    echo -e '\n' >>$conf_dir/$site_name.conf;
-    echo -e 'location /.well-known/acme-challenge {' >>$conf_dir/$site_name.conf;
+    echo -e 'server { listen 0.0.0.0:'"$site_port"';' >>$conf_dir/$site_name.conf;
+    echo -e '  server_name '"$site_name"';' >>$conf_dir/$site_name.conf;
+    echo -e '  location /.well-known/acme-challenge {' >>$conf_dir/$site_name.conf;
     echo -e '    allow all;' >>$conf_dir/$site_name.conf;
     echo -e '    autoindex off;' >>$conf_dir/$site_name.conf;
     echo -e '    default_type "text/plain";' >>$conf_dir/$site_name.conf;
     echo -e '    root '"$web_dir"';' >>$conf_dir/$site_name.conf;
-    echo -e '}' >>$conf_dir/$site_name.conf;
-    echo -e 'location = /.well-known {' >>$conf_dir/$site_name.conf;
+    echo -e '  }' >>$conf_dir/$site_name.conf;
+    echo -e '  location = /.well-known {' >>$conf_dir/$site_name.conf;
     echo -e '    return 404;' >>$conf_dir/$site_name.conf;
+    echo -e '  }' >>$conf_dir/$site_name.conf;
+    echo -e '  error_page 404 /404.html;' >>$conf_dir/$site_name.conf;
+    echo -e '  error_page 500 502 503 504 /50x.html;\n' >>$conf_dir/$site_name.conf;
+    echo -e '  error_log /var/log/nginx/err-certbot.log;' >>$conf_dir/$site_name.conf;
+    echo -e '  access_log /var/log/nginx/access-certbot.log;' >>$conf_dir/$site_name.conf;
     echo -e '}' >>$conf_dir/$site_name.conf;
-    echo -e 'error_page 404 /404.html;' >>$conf_dir/$site_name.conf;
-    echo -e 'error_page 500 502 503 504 /50x.html;' >>$conf_dir/$site_name.conf;
-    echo -e '\n' >>$conf_dir/$site_name.conf;
-    echo -e 'error_log /var/log/nginx/err-certbot.log;' >>$conf_dir/$site_name.conf;
-    echo -e 'access_log /var/log/nginx/access-certbot.log;' >>$conf_dir/$site_name.conf;
-    echo -e '}' >>$conf_dir/$site_name.conf;
-    ln -s $conf_dir/$site_name.conf $sites_nginx/$site_name.conf
-fi
+    if [ ! -f $sites_nginx/$site_name.conf ]; then
+      ln -s $conf_dir/$site_name.conf $sites_nginx/$site_name.conf
+    fi
+  fi
+done
 }
 
 ##--@F create configs
@@ -223,12 +290,52 @@ echo "  or"
 echo "  avtocertbot.sh --update nginx"
 }
 
-if [ "$opt" != "" ]; then
-  getInfo;
-  checkDep;
-  execTask;
-else
-  pHelp;
-fi
+case "$cmd" in
+  ## create cert
+  "--create" | "--create" )
+    getInfo;
+    checkDep;
+    event_key="1";
+    systemctl stop $service;
+    swSites;
+    createConf;
+    systemctl start $service;
+    createCert;
+    scanSSL;
+    event_key="0";
+    systemctl stop $service;
+    swSites;
+    systemctl start $service;
+  ;;
+
+  ## create cert
+  "--update" | "--update" )
+   getInfo;
+   checkDep;
+   event_key="1";
+   systemctl stop $service;
+   swSites;
+   createConf;
+   systemctl start $service;
+   certbot -n renew;
+   scanSSL;
+   event_key="0";
+   systemctl stop $service;
+   swSites;
+   systemctl start $service;
+  ;;
+
+  ## create cert
+  "--flist" | "--flist" )
+    getInfo;
+    checkDep;
+    scanSSL;
+  ;;
+
+  ## start defaults
+  * )
+    pHelp;
+    ;;
+  esac
 
 exit
