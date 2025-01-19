@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash -x
 #
 # author: Koshuba V.O.
 # license: GPL 2.0
@@ -22,6 +22,9 @@ event_key="1";
 
 # message from errors
 reports=();
+
+# work_sites
+active_sites=();
 
 ##--@S static values
 # depends
@@ -122,36 +125,42 @@ function checkDep() {
 }
 
 function swSites(){
-## clear job link
+## clear active sites
 if [ "$event_key" = "1" ]; then
-  for ((xd=0; xd != ${#domains[@]}; xd++)); do
-    local site_data=( $(echo -e ${domains[$xd]}|sed 's/ /\n /g') );
-    site_name="${site_data[0]}";
-    if [[ $opt != "nginx" ]] || [[ "$opt" == "apache" ]]; then
-      if [ -f $sites_apache/$site_name.conf ]; then
-        rm $sites_apache/$site_name.conf
+active_sites=( $(cat $tmp_dir/active_sites.inf) );
+  for ((xd=0; xd != ${#active_sites[@]}; xd++)); do
+    if [[ $opt != "nginx" ]] || [[ "$opt" == "apache" ]] && [[ "$opt" != "" ]]; then
+      if [ -f $sites_apache/${active_sites[$xd]} ]; then
+        rm $sites_apache/${active_sites[$xd]}
       fi
     fi
-    if [[ $opt != "apache" ]] || [[ "$opt" == "nginx" ]]; then
-      if [ -f $sites_nginx/$site_name.conf ]; then
-        rm $sites_nginx/$site_name.conf
+    if [[ $opt != "apache" ]] || [[ "$opt" == "nginx" ]] && [[ "$opt" != "" ]]; then
+      if [ -f $sites_nginx/${active_sites[$xd]} ]; then
+        rm $sites_nginx/${active_sites[$xd]}
       fi
     fi
   done
 fi
-## restore job link
+## restore active sites
 if [ "$event_key" = "0" ]; then
-  for ((xd=0; xd != ${#domains[@]}; xd++)); do
-    local site_data=( $(echo -e ${domains[$xd]}|sed 's/ /\n /g') );
-    site_name="${site_data[0]}";
-    if [[ $opt != "nginx" ]] || [[ "$opt" == "apache" ]]; then
-      if [ ! -f $sites_apache/$site_name.conf ]; then
-        ln -s $available_apache/$site_name.conf $sites_apache/$site_name.conf
+  # clear tmp configs
+  if [[ $opt != "nginx" ]] || [[ "$opt" == "apache" ]] && [[ "$opt" != "" ]]; then
+    rm $available_apache/*.conf
+  fi
+  if [[ $opt != "apache" ]] || [[ "$opt" == "nginx" ]] && [[ "$opt" != "" ]]; then
+    rm $available_nginx/*.conf
+  fi
+  # restore active links
+  active_sites=( $(cat $tmp_dir/active_sites.inf) );
+  for ((xd=0; xd != ${#active_sites[@]}; xd++)); do
+    if [[ $opt != "nginx" ]] || [[ "$opt" == "apache" ]] && [[ "$opt" != "" ]]; then
+      if [ ! -f $sites_apache/${active_sites[$xd]} ]; then
+        ln -s $available_apache/${active_sites[$xd]} $sites_apache/${active_sites[$xd]}
       fi
     fi
-    if [[ $opt != "apache" ]] || [[ "$opt" == "nginx" ]]; then
-      if [ ! -f $sites_nginx/$site_name.conf ]; then
-        ln -s $available_nginx/$site_name.conf $sites_apache/$site_name.conf
+    if [[ $opt != "apache" ]] || [[ "$opt" == "nginx" ]] && [[ "$opt" != "" ]]; then
+      if [ ! -f $sites_nginx/${active_sites[$xd]} ]; then
+        ln -s $available_nginx/${active_sites[$xd]} $sites_apache/${active_sites[$xd]}
       fi
     fi
   done
@@ -228,7 +237,7 @@ for ((xd=0; xd != ${#domains[@]}; xd++)); do
   site_owner="${site_data[1]}";
   site_port="${site_data[2]}";
   ## apache2 config
-  if [[ $opt != "nginx" ]] || [[ "$opt" == "apache" ]]; then
+  if [[ $opt != "nginx" ]] || [[ "$opt" == "apache" ]] && [[ "$opt" != "" ]] ; then
     echo >$conf_dir/$site_name.conf;
     echo -e '<VirtualHost *:'"$site_port"'>' >>$conf_dir/$site_name.conf;
     echo -e '  ServerName '"$site_name"'' >>$conf_dir/$site_name.conf;
@@ -251,7 +260,7 @@ for ((xd=0; xd != ${#domains[@]}; xd++)); do
   fi
 
   ## nginx config
-  if [[ $opt != "apache" ]] || [[ "$opt" == "nginx" ]]; then
+  if [[ $opt != "apache" ]] || [[ "$opt" == "nginx" ]] && [[ "$opt" != "" ]]; then
     echo >$conf_dir/$site_name.conf;
     echo -e 'server { listen 0.0.0.0:'"$site_port"';' >>$conf_dir/$site_name.conf;
     echo -e '  server_name '"$site_name"';' >>$conf_dir/$site_name.conf;
@@ -293,6 +302,7 @@ echo "  avtocertbot.sh --update nginx"
 case "$cmd" in
   ## create cert
   "--create" | "--create" )
+if [ "$opt" != "" ]; then
     getInfo;
     checkDep;
     event_key="1";
@@ -300,16 +310,20 @@ case "$cmd" in
     swSites;
     createConf;
     systemctl start $service;
-    createCert;
-    scanSSL;
+    #createCert;
+    #scanSSL;
     event_key="0";
     systemctl stop $service;
     swSites;
     systemctl start $service;
+else
+    pHelp;
+fi
   ;;
 
-  ## create cert
+  ## update cert
   "--update" | "--update" )
+if [ "$opt" != "" ]; then
    getInfo;
    checkDep;
    event_key="1";
@@ -317,19 +331,26 @@ case "$cmd" in
    swSites;
    createConf;
    systemctl start $service;
-   certbot -n renew;
-   scanSSL;
+   #certbot -n renew;
+   #scanSSL;
    event_key="0";
    systemctl stop $service;
    swSites;
    systemctl start $service;
+else
+    pHelp;
+fi
   ;;
 
   ## create cert
   "--flist" | "--flist" )
+if [ "$opt" != "" ]; then
     getInfo;
     checkDep;
     scanSSL;
+else
+    pHelp;
+fi
   ;;
 
   ## start defaults
