@@ -86,12 +86,12 @@ if [ ! -d $conf_dir ]; then
 fi
 
 ##
-if [[ $opt != "nginx" ]] || [[ "$opt" == "apache" ]]; then
+if [[ "$opt" != "" ]] && [[ $opt != "nginx" ]] && [[ "$opt" == "apache" ]]; then
   find $sites_apache/* -maxdepth 0 -type l -printf '%f\n' >$tmp_dir/active_sites.inf 2>/dev/null;
   get_tools[${#get_tools[@]}]="apache2";
   service="apache2";
 fi
-if [[ $opt != "apache" ]] || [[ "$opt" == "nginx" ]]; then
+if [[ "$opt" != "" ]] && [[ $opt != "apache" ]] && [[ "$opt" == "nginx" ]]; then
   find $sites_nginx/* -maxdepth 0 -type l -printf '%f\n' >$tmp_dir/active_sites.inf 2>/dev/null;
   get_tools[${#get_tools[@]}]="nginx";
   service="nginx";
@@ -129,12 +129,12 @@ function swSites(){
 if [ "$event_key" = "1" ]; then
 active_sites=( $(cat $tmp_dir/active_sites.inf) );
   for ((xd=0; xd != ${#active_sites[@]}; xd++)); do
-    if [[ $opt != "nginx" ]] || [[ "$opt" == "apache" ]] && [[ "$opt" != "" ]]; then
+    if [[ "$opt" != "" ]] && [[ $opt != "nginx" ]] && [[ "$opt" == "apache" ]]; then
       if [ -f $sites_apache/${active_sites[$xd]} ]; then
         rm $sites_apache/${active_sites[$xd]}
       fi
     fi
-    if [[ $opt != "apache" ]] || [[ "$opt" == "nginx" ]] && [[ "$opt" != "" ]]; then
+    if [[ "$opt" != "" ]] && [[ $opt != "apache" ]] && [[ "$opt" == "nginx" ]]; then
       if [ -f $sites_nginx/${active_sites[$xd]} ]; then
         rm $sites_nginx/${active_sites[$xd]}
       fi
@@ -144,21 +144,21 @@ fi
 ## restore active sites
 if [ "$event_key" = "0" ]; then
   # clear tmp configs
-  if [[ $opt != "nginx" ]] || [[ "$opt" == "apache" ]] && [[ "$opt" != "" ]]; then
+  if [[ "$opt" != "" ]] && [[ $opt != "nginx" ]] && [[ "$opt" == "apache" ]]; then
     rm $available_apache/*.conf
   fi
-  if [[ $opt != "apache" ]] || [[ "$opt" == "nginx" ]] && [[ "$opt" != "" ]]; then
+  if [[ "$opt" != "" ]] && [[ $opt != "apache" ]] && [[ "$opt" == "nginx" ]]; then
     rm $available_nginx/*.conf
   fi
   # restore active links
   active_sites=( $(cat $tmp_dir/active_sites.inf) );
   for ((xd=0; xd != ${#active_sites[@]}; xd++)); do
-    if [[ $opt != "nginx" ]] || [[ "$opt" == "apache" ]] && [[ "$opt" != "" ]]; then
+    if [[ "$opt" != "" ]] && [[ $opt != "nginx" ]] && [[ "$opt" == "apache" ]]; then
       if [ ! -f $sites_apache/${active_sites[$xd]} ]; then
         ln -s $available_apache/${active_sites[$xd]} $sites_apache/${active_sites[$xd]}
       fi
     fi
-    if [[ $opt != "apache" ]] || [[ "$opt" == "nginx" ]] && [[ "$opt" != "" ]]; then
+    if [[ "$opt" != "" ]] && [[ $opt != "apache" ]] && [[ "$opt" == "nginx" ]]; then
       if [ ! -f $sites_nginx/${active_sites[$xd]} ]; then
         ln -s $available_nginx/${active_sites[$xd]} $sites_apache/${active_sites[$xd]}
       fi
@@ -237,7 +237,7 @@ for ((xd=0; xd != ${#domains[@]}; xd++)); do
   site_owner="${site_data[1]}";
   site_port="${site_data[2]}";
   ## apache2 config
-  if [[ $opt != "nginx" ]] || [[ "$opt" == "apache" ]] && [[ "$opt" != "" ]] ; then
+  if [[ "$opt" != "" ]] && [[ $opt != "nginx" ]] && [[ "$opt" == "apache" ]]; then
     echo >$conf_dir/$site_name.conf;
     echo -e '<VirtualHost *:'"$site_port"'>' >>$conf_dir/$site_name.conf;
     echo -e '  ServerName '"$site_name"'' >>$conf_dir/$site_name.conf;
@@ -260,7 +260,7 @@ for ((xd=0; xd != ${#domains[@]}; xd++)); do
   fi
 
   ## nginx config
-  if [[ $opt != "apache" ]] || [[ "$opt" == "nginx" ]] && [[ "$opt" != "" ]]; then
+  if [[ "$opt" != "" ]] && [[ $opt != "apache" ]] && [[ "$opt" == "nginx" ]]; then
     echo >$conf_dir/$site_name.conf;
     echo -e 'server { listen 0.0.0.0:'"$site_port"';' >>$conf_dir/$site_name.conf;
     echo -e '  server_name '"$site_name"';' >>$conf_dir/$site_name.conf;
