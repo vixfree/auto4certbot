@@ -51,6 +51,14 @@ if [ $log_file == "" ]; then
 fi
 
 if [ $sites_nginx == "" ]; then
+  available_nginx="/etc/nginx/sites-available";
+fi
+
+if [ $sites_apache == "" ]; then
+  available_apache="/etc/apache2/sites-available";
+fi
+
+if [ $sites_nginx == "" ]; then
   sites_nginx="/etc/nginx/sites-enabled";
 fi
 
@@ -145,10 +153,10 @@ fi
 if [ "$event_key" = "0" ]; then
   # clear tmp configs
   if [[ "$opt" != "" ]] && [[ $opt != "nginx" ]] && [[ "$opt" == "apache" ]]; then
-    rm $available_apache/*.conf
+    rm $sites_apache/*.conf
   fi
   if [[ "$opt" != "" ]] && [[ $opt != "apache" ]] && [[ "$opt" == "nginx" ]]; then
-    rm $available_nginx/*.conf
+    rm $sites_nginx/*.conf
   fi
   # restore active links
   active_sites=( $(cat $tmp_dir/active_sites.inf) );
@@ -160,7 +168,7 @@ if [ "$event_key" = "0" ]; then
     fi
     if [[ "$opt" != "" ]] && [[ $opt != "apache" ]] && [[ "$opt" == "nginx" ]]; then
       if [ ! -f $sites_nginx/${active_sites[$xd]} ]; then
-        ln -s $available_nginx/${active_sites[$xd]} $sites_apache/${active_sites[$xd]}
+        ln -s $available_nginx/${active_sites[$xd]} $sites_nginx/${active_sites[$xd]}
       fi
     fi
   done
