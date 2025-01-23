@@ -69,10 +69,7 @@ if [ $sites_apache == "" ]; then
   fi
 fi
 
-if [ $apache2_mode == "" ]; then
-  apache2_mode="prefork";
-fi
-
+## apache2 mode: prefork or worker (multi-instance)
 if [ $apache2_service == "" ]; then
   apache2_service="apache2";
 fi
@@ -105,7 +102,7 @@ fi
 if [[ "$opt" != "" ]] && [[ $opt != "nginx" ]] && [[ "$opt" == "apache" ]]; then
   find $sites_apache/* -maxdepth 0 -type l -printf '%f\n' >$tmp_dir/active_sites.inf 2>/dev/null;
   get_tools[${#get_tools[@]}]="apache2";
-  service="apache2";
+  service="$apache2_service";
 fi
 if [[ "$opt" != "" ]] && [[ $opt != "apache" ]] && [[ "$opt" == "nginx" ]]; then
   find $sites_nginx/* -maxdepth 0 -type l -printf '%f\n' >$tmp_dir/active_sites.inf 2>/dev/null;
@@ -199,10 +196,10 @@ for ((xd=0; xd != ${#domains[@]}; xd++)); do
   local site_data=( $(echo -e ${domains[$xd]}|sed 's/ /\n /g') );
   site_name="${site_data[0]}";
   site_owner="${site_data[1]}";
-  certbot register -m "$site_owner" -d $site_name
-  sleep 2;
+  #certbot register -m "$site_owner" -d $site_name
+  #sleep 2;
   certbot -m "$site_owner" certonly --webroot --webroot-path $web_dir -d $site_name
-  sleep 3;
+  sleep 2;
 done
 }
 
