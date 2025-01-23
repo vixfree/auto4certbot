@@ -69,6 +69,14 @@ if [ $sites_apache == "" ]; then
   fi
 fi
 
+if [ $apache2_mode == "" ]; then
+  apache2_mode="prefork";
+fi
+
+if [ $apache2_service == "" ]; then
+  apache2_service="apache2";
+fi
+
 if [ $path_ssl == "" ]; then
   path_ssl="/etc/ssl";
 fi
