@@ -251,6 +251,7 @@ for ((xd=0; xd != ${#domains[@]}; xd++)); do
   site_port="${site_data[2]}";
   ## apache2 config
   if [[ "$opt" != "" ]] && [[ $opt != "nginx" ]] && [[ "$opt" == "apache" ]]; then
+    ## добавить проверку режима apache2 и путь для активации конфигурации
     echo >$conf_dir/$site_name.conf;
     echo -e '<VirtualHost *:'"$site_port"'>' >>$conf_dir/$site_name.conf;
     echo -e '  ServerName '"$site_name"'' >>$conf_dir/$site_name.conf;
