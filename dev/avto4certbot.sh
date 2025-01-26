@@ -213,11 +213,11 @@ rtime=$(date +%H:%M);
 for ((xd=0; xd != ${#domains[@]}; xd++)); do
   local site_data=( $(echo -e ${domains[$xd]}|sed 's/ /\n /g') );
   site_name="${site_data[0]}";
-  keydate=$(ls -l --time-style=long-iso $path_cert/$site_name/cert.pem |awk {'print$6'});
-  keytime=$(ls -l --time-style=long-iso $path_cert/$site_name/cert.pem |awk {'print$7'});
-  if [[ "$keydate" = "$rdate" ]] && [[ "$keytime" = "$rtime" ]]; then
-    ((event_sw++));
-      if [ -d $path_cert/$site_name ]; then
+  if [ -d $path_cert/$site_name ]; then
+    keydate=$(ls -l --time-style=long-iso $path_cert/$site_name/cert.pem |awk {'print$6'});
+    keytime=$(ls -l --time-style=long-iso $path_cert/$site_name/cert.pem |awk {'print$7'});
+    if [[ "$keydate" = "$rdate" ]] && [[ "$keytime" = "$rtime" ]]; then
+      ((event_sw++));
         cat $path_cert/$site_name/privkey.pem > $path_ssl/private/privkey_$site_name.pem;
         cat $path_cert/$site_name/fullchain.pem > $path_ssl/private/fullchain_$site_name.pem;
         cat $path_cert/$site_name/fullchain.pem > $path_ssl/private/$site_name.pem;
@@ -229,7 +229,7 @@ for ((xd=0; xd != ${#domains[@]}; xd++)); do
         ln -sf $site_name.pem `openssl x509 -noout -hash < $site_name.pem`.0
         cd $path_ssl
         echo "$(date) - $sname: update cert for  $site_name">> $log;
-      fi
+    fi
   fi
 done
 
@@ -339,6 +339,7 @@ if [ "$opt" != "" ]; then
     systemctl stop $web_service;
     swSites;
     systemctl start $web_service;
+    updateScs;
 else
     pHelp;
 fi
@@ -360,6 +361,7 @@ if [ "$opt" != "" ]; then
    systemctl stop $web_service;
    swSites;
    systemctl start $web_service;
+   updateScs;
 else
     pHelp;
 fi
@@ -371,6 +373,7 @@ if [ "$opt" != "" ]; then
     getInfo;
     checkDep;
     scanSSL;
+    updateScs;
 else
     pHelp;
 fi
