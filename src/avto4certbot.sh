@@ -404,6 +404,7 @@ if [ "$opt" != "" ]; then
     swSites;
     systemctl start $web_service;
     updateScs;
+  fi
 else
     pHelp;
 fi
@@ -419,16 +420,17 @@ if [ "$opt" != "" ]; then
       scanSSL;
       systemctl restart $http_proxy
       updateScs;
-      else
+    else
         reports=()
         reports[${#reports[@]}]="Sorry, there are not found proxy: $http_proxy"
         makeErr
         exit
-      fi
-    else
+    fi
+  else
       scanSSL;
       systemctl restart $web_service;
       updateScs;
+  fi
 else
     pHelp;
 fi
