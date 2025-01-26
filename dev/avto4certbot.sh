@@ -37,6 +37,9 @@ cmd=$1;
 # - for LAMP server
 opt=$2;
 
+# - for proxy mode
+sw_proxy=$3;
+
 #--@F Get info area
 function getInfo() {
 ## test - null values
@@ -196,8 +199,6 @@ for ((xd=0; xd != ${#domains[@]}; xd++)); do
   local site_data=( $(echo -e ${domains[$xd]}|sed 's/ /\n /g') );
   site_name="${site_data[0]}";
   site_owner="${site_data[1]}";
-  #certbot register -m "$site_owner" -d $site_name
-  #sleep 2;
   certbot -m "$site_owner" certonly --webroot --webroot-path $web_dir -d $site_name
   sleep 2;
 done
@@ -311,15 +312,17 @@ fi
 ##--@F help
 function pHelp(){
 echo "$sname:$version"
-echo "please input pameters: avto4certbot.sh --create [apache & nginx]| --update [apache & nginx] | --flist [apache & nginx]";
-echo "avto4certbot.sh --create; create new certificate or --create [apache & nginx]; create new certificate " 
-echo "avto4certbot.sh --update; update certificates or --update [apache & nginx]; update [apache & nginx];"
-echo "avto4certbot.sh --flist; update certificates from ssl or --flist [apache & nginx]; rescan list certificates;"
+echo "please input pameters: avto4certbot.sh --create [apache & nginx && proxy]| --update [apache & nginx] | --flist [apache & nginx]";
+echo "avto4certbot.sh --create; create new certificate or --create [apache & nginx && proxy]; create new certificate " 
+echo "avto4certbot.sh --update; update certificates or --update [apache & nginx && proxy]; update [apache & nginx];"
+echo "avto4certbot.sh --flist; update certificates from ssl or --flist [apache & nginx && proxy]; rescan list certificates;"
 echo "avto4certbot.sh --help; this help"
 echo "* examples:"
 echo "  avtocertbot.sh --update apache"
 echo "  or"
 echo "  avtocertbot.sh --update nginx"
+echo "  or"
+echo "  avtocertbot.sh --update apache proxy"
 }
 
 case "$cmd" in
@@ -329,11 +332,72 @@ if [ "$opt" != "" ]; then
     getInfo;
     checkDep;
     event_key="1";
+    if [ $sw_proxy == "proxy" ]; then
+      if [[ "$http_proxy" != "" ]] && [[ "$(systemctl list-units|grep "$http_proxy"|wc -m)" != "0" ]]; then
+        systemctl stop $http_proxy
+        createConf;
+        systemctl start $web_service;
+        createCert;
+        scanSSL;
+        event_key="0";
+        systemctl stop $web_service;
+        swSites;
+        updateScs;
+        systemctl start $http_proxy
+      else
+        reports=()
+        reports[${#reports[@]}]="Sorry, there are not found proxy: $http_proxy"
+        makeErr
+        exit
+      fi
+    else
+      systemctl stop $web_service;
+      swSites;
+      createConf;
+      systemctl start $web_service;
+      createCert;
+      scanSSL;
+      event_key="0";
+      systemctl stop $web_service;
+      swSites;
+      systemctl start $web_service;
+      updateScs;
+    fi
+else
+    pHelp;
+fi
+  ;;
+
+  ## update cert
+  "--update" | "--update" )
+if [ "$opt" != "" ]; then
+  getInfo;
+  checkDep;
+  event_key="1";
+  if [ $sw_proxy == "proxy" ]; then
+    if [[ "$http_proxy" != "" ]] && [[ "$(systemctl list-units|grep "$http_proxy"|wc -m)" != "0" ]]; then
+      systemctl stop $http_proxy
+      createConf;
+      systemctl start $web_service;
+      certbot -n renew;
+      scanSSL;
+      event_key="0";
+      systemctl stop $web_service;
+      swSites;
+      updateScs;
+      systemctl start $http_proxy
+    else
+      reports=()
+      reports[${#reports[@]}]="Sorry, there are not found proxy: $http_proxy"
+      makeErr
+      exit
+    fi
+  else
     systemctl stop $web_service;
     swSites;
     createConf;
     systemctl start $web_service;
-    createCert;
+    certbot -n renew;
     scanSSL;
     event_key="0";
     systemctl stop $web_service;
@@ -345,35 +409,26 @@ else
 fi
   ;;
 
-  ## update cert
-  "--update" | "--update" )
-if [ "$opt" != "" ]; then
-   getInfo;
-   checkDep;
-   event_key="1";
-   systemctl stop $web_service;
-   swSites;
-   createConf;
-   systemctl start $web_service;
-   certbot -n renew;
-   scanSSL;
-   event_key="0";
-   systemctl stop $web_service;
-   swSites;
-   systemctl start $web_service;
-   updateScs;
-else
-    pHelp;
-fi
-  ;;
-
   ## create cert
   "--flist" | "--flist" )
 if [ "$opt" != "" ]; then
-    getInfo;
-    checkDep;
-    scanSSL;
-    updateScs;
+  getInfo;
+  checkDep;
+  if [ $sw_proxy == "proxy" ]; then
+    if [[ "$http_proxy" != "" ]] && [[ "$(systemctl list-units|grep "$http_proxy"|wc -m)" != "0" ]]; then
+      scanSSL;
+      systemctl restart $http_proxy
+      updateScs;
+      else
+        reports=()
+        reports[${#reports[@]}]="Sorry, there are not found proxy: $http_proxy"
+        makeErr
+        exit
+      fi
+    else
+      scanSSL;
+      systemctl restart $web_service;
+      updateScs;
 else
     pHelp;
 fi
