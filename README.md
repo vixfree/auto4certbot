@@ -27,5 +27,5 @@ avto4certbot.sh --help; this help
 
 ```
 ## autocertbot
-24 01 * * * root /etc/scripts/avto4certbot/avto4certbot.sh --update nginx
+24 01 * * * root /etc/avto4certbot/avto4certbot.sh --update nginx
 ```
