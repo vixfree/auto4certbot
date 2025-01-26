@@ -3,8 +3,7 @@
 Если возникает ошибка: "Peer's Certificate issuer is not recognized"
 используейте параметр: git -c http.sslVerify=false clone ...
 
---
-begin edit avto4certbot.conf
+* begin edit avto4certbot.conf
 ```
 please input pameters: avto4certbot.sh --create [apache & nginx && proxy]| --update [apache & nginx] | --flist [apache & nginx]
 avto4certbot.sh --create; create new certificate or --create [apache & nginx && proxy]; create new certificate 
@@ -18,10 +17,10 @@ avto4certbot.sh --help; this help
   or
   avtocertbot.sh --update apache proxy
 ```
---
-example crontab:
+
+* example crontab:
 
 ```
 ## autocertbot
-24 01 * * * root /etc/scripts/avto4certbot/avto4certbot.sh --update
+24 01 * * * root /etc/scripts/avto4certbot/avto4certbot.sh --update nginx
 ```
