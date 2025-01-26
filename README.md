@@ -1,4 +1,4 @@
-#### package scripts for auto update all certs
+#### Package scripts for auto update all certs
 #### Uses apache2 or nginx
 #### avto4certbot version:0.5.0
 
