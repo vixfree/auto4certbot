@@ -1,5 +1,5 @@
-#### Package scripts for auto update all certs
-#### Uses apache2 or nginx
+#### Package scripts for auto update all certs.
+#### Uses apache2 or nginx and the certbot package.
 #### avto4certbot version:0.5.0
 
 * If the error “Peer's Certificate issuer is not recognized” occurs, use the following parameter: 
