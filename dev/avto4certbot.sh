@@ -228,7 +228,7 @@ for ((xd=0; xd != ${#domains[@]}; xd++)); do
         chmod 600 $site_name.pem
         ln -sf $site_name.pem `openssl x509 -noout -hash < $site_name.pem`.0
         cd $path_ssl
-        echo "$(date) - $sname: update cert for  $site_name">> $log;
+        echo "$(date) - $sname: update cert for  $site_name">> $log_file;
     fi
   fi
 done
