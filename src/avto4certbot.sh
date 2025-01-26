@@ -332,7 +332,7 @@ if [ "$opt" != "" ]; then
     getInfo;
     checkDep;
     event_key="1";
-    if [ $sw_proxy == "proxy" ]; then
+    if [ "$sw_proxy" == "proxy" ]; then
       if [[ "$http_proxy" != "" ]] && [[ "$(systemctl list-units|grep "$http_proxy"|wc -m)" != "0" ]]; then
         systemctl stop $http_proxy
         createConf;
@@ -374,7 +374,7 @@ if [ "$opt" != "" ]; then
   getInfo;
   checkDep;
   event_key="1";
-  if [ $sw_proxy == "proxy" ]; then
+  if [ "$sw_proxy" == "proxy" ]; then
     if [[ "$http_proxy" != "" ]] && [[ "$(systemctl list-units|grep "$http_proxy"|wc -m)" != "0" ]]; then
       systemctl stop $http_proxy
       createConf;
@@ -415,7 +415,7 @@ fi
 if [ "$opt" != "" ]; then
   getInfo;
   checkDep;
-  if [ $sw_proxy == "proxy" ]; then
+  if [ "$sw_proxy" == "proxy" ]; then
     if [[ "$http_proxy" != "" ]] && [[ "$(systemctl list-units|grep "$http_proxy"|wc -m)" != "0" ]]; then
       scanSSL;
       systemctl restart $http_proxy
