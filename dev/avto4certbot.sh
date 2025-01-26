@@ -1,4 +1,4 @@
-#!/bin/bash -x
+#!/bin/bash
 #
 # author: Koshuba V.O.
 # license: GPL 2.0
@@ -12,7 +12,7 @@ path_script=$( cd -- $( dirname -- "${BASH_SOURCE[0]}" ) &> /dev/null && pwd );
 source "$path_script/avto4certbot.conf";
 
 # service LAMP
-service="";
+web_service="";
 
 # new certificate or renewal event
 event_sw=0;
@@ -102,12 +102,12 @@ fi
 if [[ "$opt" != "" ]] && [[ $opt != "nginx" ]] && [[ "$opt" == "apache" ]]; then
   find $sites_apache/* -maxdepth 0 -type l -printf '%f\n' >$tmp_dir/active_sites.inf 2>/dev/null;
   get_tools[${#get_tools[@]}]="apache2";
-  service="$apache2_service";
+  web_service="$apache2_service";
 fi
 if [[ "$opt" != "" ]] && [[ $opt != "apache" ]] && [[ "$opt" == "nginx" ]]; then
   find $sites_nginx/* -maxdepth 0 -type l -printf '%f\n' >$tmp_dir/active_sites.inf 2>/dev/null;
   get_tools[${#get_tools[@]}]="nginx";
-  service="nginx";
+  web_service="nginx";
 fi
 }
 
@@ -299,7 +299,16 @@ for ((xd=0; xd != ${#domains[@]}; xd++)); do
 done
 }
 
-##--@F create configs
+##--@F restart services
+function updateScs(){
+if [[ "${services[@]}" != "" ]] && [[ "${#services[@]}" != "0" ]]; then
+  for ((scn=0; scn != ${#services[@]}; scn++)); do
+     systemctl restart ${services[$scn]};
+  done
+fi
+}
+
+##--@F help
 function pHelp(){
 echo "$sname:$version"
 echo "please input pameters: avto4certbot.sh --create [apache & nginx]| --update [apache & nginx] | --flist [apache & nginx]";
@@ -320,16 +329,16 @@ if [ "$opt" != "" ]; then
     getInfo;
     checkDep;
     event_key="1";
-    systemctl stop $service;
+    systemctl stop $web_service;
     swSites;
     createConf;
-    systemctl start $service;
-    #createCert;
-    #scanSSL;
+    systemctl start $web_service;
+    createCert;
+    scanSSL;
     event_key="0";
-    systemctl stop $service;
+    systemctl stop $web_service;
     swSites;
-    systemctl start $service;
+    systemctl start $web_service;
 else
     pHelp;
 fi
@@ -341,16 +350,16 @@ if [ "$opt" != "" ]; then
    getInfo;
    checkDep;
    event_key="1";
-   systemctl stop $service;
+   systemctl stop $web_service;
    swSites;
    createConf;
-   systemctl start $service;
-   #certbot -n renew;
-   #scanSSL;
+   systemctl start $web_service;
+   certbot -n renew;
+   scanSSL;
    event_key="0";
-   systemctl stop $service;
+   systemctl stop $web_service;
    swSites;
-   systemctl start $service;
+   systemctl start $web_service;
 else
     pHelp;
 fi
