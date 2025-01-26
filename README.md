@@ -1,7 +1,11 @@
 ### package scripts for auto update all certs
 ### avto4certbot:0.5.0
-Если возникает ошибка: "Peer's Certificate issuer is not recognized"
-используейте параметр: git -c http.sslVerify=false clone ...
+
+* If the error “Peer's Certificate issuer is not recognized” occurs, use the following parameter: 
+
+```
+git -c http.sslVerify=false clone https://develop.qbpro.ru/master/autocertbot.git
+```
 
 * begin edit avto4certbot.conf
 
