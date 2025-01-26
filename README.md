@@ -5,10 +5,19 @@
 * If the error “Peer's Certificate issuer is not recognized” occurs, use the following parameter: 
 
 ```
-git -c http.sslVerify=false clone https://develop.qbpro.ru/master/autocertbot.git
+git -c http.sslVerify=false clone https://develop.qbpro.ru/master/auto4certbot.git
 ```
 
-* begin edit avto4certbot.conf
+* Install:
+```
+git clone https://develop.qbpro.ru/master/auto4certbot.git
+cd ~/auto4certbot/src
+mkdir -p /etc/auto4certbot
+cp * /etc/auto4certbot/
+```
+* edit avto4certbot.conf
+* To check the operation, run the script without parameters, it will install the necessary packages or tell you what needs to be installed.
+* if everything is installed, the answer will be:
 
 ```
 please input pameters: avto4certbot.sh --create [apache & nginx && proxy]| --update [apache & nginx] | --flist [apache & nginx]
@@ -23,6 +32,7 @@ avto4certbot.sh --help; this help
   or
   avtocertbot.sh --update apache proxy
 ```
+* Use the --create [apache or nginx] parameter to create the first certificate.
 
 * example crontab:
 
