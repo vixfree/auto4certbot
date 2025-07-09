@@ -4,7 +4,7 @@
 # license: GPL 2.0
 # create 2022
 #
-version="0.5.0";
+version="0.5.4";
 sname="avto4certbot";
 
 # script path
@@ -204,7 +204,6 @@ for ((xd=0; xd != ${#domains[@]}; xd++)); do
 done
 }
 
-
 ##--@F exec task
 function scanSSL(){
 ## if event - yes
@@ -217,13 +216,20 @@ for ((xd=0; xd != ${#domains[@]}; xd++)); do
   if [ -d $path_cert/$site_name ]; then
     keydate=$(ls -l --time-style=long-iso $path_cert/$site_name/cert.pem |awk {'print$6'});
     keytime=$(ls -l --time-style=long-iso $path_cert/$site_name/cert.pem |awk {'print$7'});
-    if [[ "$keydate" = "$rdate" ]] && [[ "$keytime" = "$rtime" ]]; then
+    if [ ! -f $path_ssl/certs/$site_name.pem ]; then
       ((event_sw++));
-        cat $path_cert/$site_name/privkey.pem > $path_ssl/private/privkey_$site_name.pem;
-        cat $path_cert/$site_name/fullchain.pem > $path_ssl/private/fullchain_$site_name.pem;
-        cat $path_cert/$site_name/fullchain.pem > $path_ssl/private/$site_name.pem;
-        cat $path_cert/$site_name/privkey.pem >> $path_ssl/private/$site_name.pem;
-      #
+      if [ -f $path_ssl/private/$site_name.pem ]; then
+        cp -f $path_ssl/private/$site_name.pem $path_ssl/certs/$site_name.pem
+        cd $path_ssl/certs
+        chmod 600 $site_name.pem
+        ln -sf $site_name.pem `openssl x509 -noout -hash < $site_name.pem`.0
+        cd $path_ssl
+        echo "$(date) - $sname: update cert for  $site_name">> $log_file;
+      fi
+    fi
+
+    if [[ -f $path_ssl/private/$site_name.pem ]] && [[ "$keydate" = "$rdate" ]] && [[ "$keytime" = "$rtime" ]]; then
+      ((event_sw++));
         cp -f $path_ssl/private/$site_name.pem $path_ssl/certs/$site_name.pem
         cd $path_ssl/certs
         chmod 600 $site_name.pem
@@ -235,12 +241,30 @@ for ((xd=0; xd != ${#domains[@]}; xd++)); do
 done
 
 if [ $event_sw != 0 ];then
-  echo>/etc/ssl/crt-list.txt
-  for ((xd=0; xd != ${#domains[@]}; xd++)); do
-    local site_data=( $(echo -e ${domains[$xd]}|sed 's/ /\n /g') );
-    echo "$path_ssl/${site_data[0]}.pem">>/etc/ssl/crt-list.txt
-  done
+  flistCerts;
 fi
+}
+
+##--@F create from ssl
+function flistCerts(){
+echo>/etc/ssl/crt-list.txt
+for ((xd=0; xd != ${#domains[@]}; xd++)); do
+  local site_data=( $(echo -e ${domains[$xd]}|sed 's/ /\n /g') );
+  site_name="${site_data[0]}";
+  if [ -d $path_cert/$site_name ]; then
+    cat $path_cert/$site_name/privkey.pem > $path_ssl/private/privkey_$site_name.pem;
+    chmod 0640 $path_ssl/private/privkey_$site_name.pem;
+    cat $path_cert/$site_name/fullchain.pem > $path_ssl/private/fullchain_$site_name.pem;
+    cat $path_cert/$site_name/fullchain.pem > $path_ssl/private/$site_name.pem;
+    cat $path_cert/$site_name/privkey.pem >> $path_ssl/private/$site_name.pem;
+    echo "$path_ssl/$site_name.pem">>/etc/ssl/crt-list.txt
+    cp -f $path_ssl/private/$site_name.pem $path_ssl/certs/$site_name.pem
+    cd $path_ssl/certs
+    chmod 600 $site_name.pem
+    ln -sf $site_name.pem `openssl x509 -noout -hash < $site_name.pem`.0
+    cd $path_ssl
+  fi
+done
 }
 
 ##--@F create configs
@@ -337,6 +361,7 @@ if [ "$opt" != "" ]; then
         systemctl stop $http_proxy
         createConf;
         systemctl start $web_service;
+        sleep 2;
         createCert;
         scanSSL;
         event_key="0";
@@ -355,6 +380,7 @@ if [ "$opt" != "" ]; then
       swSites;
       createConf;
       systemctl start $web_service;
+      sleep 2;
       createCert;
       scanSSL;
       event_key="0";
@@ -379,6 +405,7 @@ if [ "$opt" != "" ]; then
       systemctl stop $http_proxy
       createConf;
       systemctl start $web_service;
+      sleep 2;
       certbot -n renew;
       scanSSL;
       event_key="0";
@@ -397,6 +424,7 @@ if [ "$opt" != "" ]; then
     swSites;
     createConf;
     systemctl start $web_service;
+    sleep 2;
     certbot -n renew;
     scanSSL;
     event_key="0";
@@ -417,7 +445,7 @@ if [ "$opt" != "" ]; then
   checkDep;
   if [ "$sw_proxy" == "proxy" ]; then
     if [[ "$http_proxy" != "" ]] && [[ "$(systemctl list-units|grep "$http_proxy"|wc -m)" != "0" ]]; then
-      scanSSL;
+      flistCerts;
       systemctl restart $http_proxy
       updateScs;
     else
@@ -427,7 +455,7 @@ if [ "$opt" != "" ]; then
         exit
     fi
   else
-      scanSSL;
+      flistCerts;
       systemctl restart $web_service;
       updateScs;
   fi

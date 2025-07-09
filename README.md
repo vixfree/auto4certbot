@@ -1,6 +1,6 @@
 #### Package scripts for auto update all certs.
 #### Uses apache2 or nginx and the certbot package.
-#### avto4certbot version:0.5.0
+#### avto4certbot version:0.5.4
 
 * If the error “Peer's Certificate issuer is not recognized” occurs, use the following parameter: 
 
@@ -42,3 +42,16 @@ avto4certbot.sh --help; this help
 ## autocertbot
 24 01 * * * root /etc/avto4certbot/avto4certbot.sh --update nginx
 ```
+
+* check work - create on server:
+
+```
+echo "WELCOME" >/var/www/certbot/www/.well-known/acme-challenge/test.txt
+```
+* check from an external client:
+
+```
+curl -ikL http://mydomen.ru/.well-known/acme-challenge/test.txt
+```
+
+License: GPLv2.0
